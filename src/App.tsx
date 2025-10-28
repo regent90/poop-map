@@ -649,15 +649,32 @@ const App: React.FC = () => {
   };
 
   const handleAcceptRequest = async (requestId: string) => {
+    console.log('🔄 Accepting friend request:', requestId);
     const request = friendRequests.find(r => r.id === requestId);
-    if (!request || !user?.email) return;
+    
+    if (!request) {
+      console.error('❌ Friend request not found:', requestId);
+      alert('❌ Friend request not found');
+      return;
+    }
+    
+    if (!user?.email) {
+      console.error('❌ User email not found');
+      alert('❌ User not logged in');
+      return;
+    }
+
+    console.log('📋 Request details:', request);
+    console.log('👤 Current user:', user.email);
+    console.log('🔧 Firebase status:', { useFirebase, isOnline, firebaseReady });
 
     try {
       if (useFirebase && isOnline && firebaseReady) {
-        // Update request status in Firebase
+        console.log('🔄 Step 1: Updating request status in Firebase...');
         await updateFriendRequestStatus(requestId, 'accepted');
-        console.log('✅ Friend request accepted in Firebase');
+        console.log('✅ Step 1 complete: Friend request status updated');
 
+        console.log('🔄 Step 2: Adding requester to current user\'s friends...');
         // Add requester to current user's friends list in Firebase
         const newFriend: Friend = {
           id: request.fromUserId,
@@ -669,7 +686,9 @@ const App: React.FC = () => {
         };
 
         await saveFriendToCloud(user.email, newFriend);
+        console.log('✅ Step 2 complete: Added requester to current user\'s friends');
 
+        console.log('🔄 Step 3: Adding current user to requester\'s friends...');
         // Add current user to requester's friends list (mutual friendship)
         const mutualFriend: Friend = {
           id: user.email,
@@ -681,10 +700,13 @@ const App: React.FC = () => {
         };
 
         await saveFriendToCloud(request.fromUserEmail, mutualFriend);
+        console.log('✅ Step 3 complete: Added current user to requester\'s friends');
 
+        console.log('🔄 Step 4: Updating local state...');
         // Update local state (real-time listeners will also update this)
         const updatedFriends = [...friends, newFriend];
         setFriends(updatedFriends);
+        console.log('✅ Step 4 complete: Local state updated');
 
         alert(`✅ Friend request accepted!\n\n👥 You and ${request.fromUserName} are now friends!`);
       } else {
@@ -738,7 +760,16 @@ const App: React.FC = () => {
       }
     } catch (error) {
       console.error('❌ Failed to accept friend request:', error);
-      alert('❌ Failed to accept friend request. Please try again.');
+      console.error('Error details:', error);
+      
+      // Check if it's a permission error
+      if (error.code === 'permission-denied') {
+        alert('❌ Permission denied. Please check Firestore security rules.');
+      } else if (error.code === 'not-found') {
+        alert('❌ Friend request not found in database.');
+      } else {
+        alert(`❌ Failed to accept friend request: ${error.message}`);
+      }
     }
   };
 
