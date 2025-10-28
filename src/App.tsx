@@ -310,7 +310,16 @@ const App: React.FC = () => {
         const lng = position.coords.longitude;
 
         try {
-          // Get place information from Google Maps Geocoding API
+          // TEMPORARILY DISABLED: Geocoding API has permission issues
+          // Will re-enable after API key is properly configured
+          console.log('⚠️ Geocoding temporarily disabled due to API permissions');
+          
+          // Skip geocoding and proceed directly to poop details modal
+          setPendingPoopData({ lat, lng });
+          setShowPoopModal(true);
+          return;
+
+          /* ORIGINAL GEOCODING CODE - DISABLED
           const geocoder = new (window as any).google.maps.Geocoder();
           const response = await new Promise((resolve, reject) => {
             geocoder.geocode(
@@ -333,6 +342,7 @@ const App: React.FC = () => {
               }
             );
           });
+          */
 
           const result = response as any;
           const address = result.formatted_address;
@@ -1182,7 +1192,7 @@ const App: React.FC = () => {
         {/* Google API test button */}
         <button
           onClick={async () => {
-            console.log('🗺️ Testing Google APIs...');
+            console.log('🗺️ Testing Google Maps API...');
             try {
               const google = (window as any).google;
               if (!google?.maps) {
@@ -1190,23 +1200,16 @@ const App: React.FC = () => {
                 return;
               }
 
-              // Test Geocoding API
-              const geocoder = new google.maps.Geocoder();
-              const testResult = await new Promise((resolve, reject) => {
-                geocoder.geocode(
-                  { location: { lat: 25.0330, lng: 121.5654 } }, // 台北101
-                  (results: any, status: any) => {
-                    if (status === 'OK' && results[0]) {
-                      resolve(results[0]);
-                    } else {
-                      reject(new Error(`Geocoding failed: ${status}`));
-                    }
-                  }
-                );
+              // Test basic Maps API (without Geocoding)
+              console.log('✅ Google Maps API loaded successfully');
+              console.log('📍 Available services:', {
+                Map: !!google.maps.Map,
+                Marker: !!google.maps.Marker,
+                AdvancedMarkerElement: !!google.maps.marker?.AdvancedMarkerElement,
+                Geocoder: !!google.maps.Geocoder
               });
 
-              const result = testResult as any;
-              alert(`✅ Google APIs 連接成功！\n\n📍 測試結果：\n• 地址: ${result.formatted_address}\n• 狀態: 正常運作`);
+              alert(`✅ Google Maps API 連接成功！\n\n📍 測試結果：\n• Maps API: 正常載入\n• 地圖功能: 可用\n• 狀態: 正常運作\n\n⚠️ 注意：Geocoding API 暫時禁用\n需要修復 API 金鑰權限`);
               
             } catch (error) {
               console.error('Google API test failed:', error);
