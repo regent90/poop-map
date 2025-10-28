@@ -749,24 +749,66 @@ const App: React.FC = () => {
   console.log('🗺️ Google Maps API Key loaded:', apiKey ? 'Yes' : 'No');
   console.log('🔑 API Key length:', apiKey.length);
 
+  // Check for ad blocker
+  useEffect(() => {
+    const checkAdBlocker = () => {
+      // Create a test element that ad blockers typically block
+      const testAd = document.createElement('div');
+      testAd.innerHTML = '&nbsp;';
+      testAd.className = 'adsbox';
+      testAd.style.position = 'absolute';
+      testAd.style.left = '-10000px';
+      document.body.appendChild(testAd);
+      
+      setTimeout(() => {
+        const isBlocked = testAd.offsetHeight === 0;
+        if (isBlocked) {
+          console.warn('🚫 Ad blocker detected - this may interfere with Google Maps loading');
+        }
+        document.body.removeChild(testAd);
+      }, 100);
+    };
+    
+    checkAdBlocker();
+  }, []);
+
   const render = (status: Status) => {
     console.log('🗺️ Google Maps loading status:', status);
     
     if (status === Status.FAILURE) {
-      const errorMessage = !apiKey 
-        ? 'Google Maps API key is missing. Please check environment variables.'
-        : 'Failed to load Google Maps. Please check API key permissions and network connection.';
+      let errorMessage = 'Failed to load Google Maps.';
+      let troubleshooting = [];
+      
+      if (!apiKey) {
+        errorMessage = 'Google Maps API key is missing.';
+        troubleshooting.push('Check environment variables');
+      } else {
+        // Check for common issues
+        troubleshooting.push('Try disabling ad blocker (uBlock Origin, AdBlock Plus)');
+        troubleshooting.push('Check browser extensions');
+        troubleshooting.push('Verify API key permissions');
+        troubleshooting.push('Check network connection');
+      }
       
       return (
         <div className="h-full w-full flex items-center justify-center bg-red-100">
-          <div className="text-center p-4">
-            <p className="text-red-600 font-semibold mb-2">Google Maps Loading Error</p>
-            <p className="text-red-500 text-sm">{errorMessage}</p>
-            {!apiKey && (
-              <p className="text-red-400 text-xs mt-2">
-                Expected: VITE_GOOGLE_MAPS_API_KEY environment variable
-              </p>
-            )}
+          <div className="text-center p-4 max-w-md">
+            <p className="text-red-600 font-semibold mb-2">🚫 Google Maps Loading Failed</p>
+            <p className="text-red-500 text-sm mb-3">{errorMessage}</p>
+            
+            <div className="text-left bg-red-50 p-3 rounded text-xs">
+              <p className="font-semibold text-red-700 mb-2">Troubleshooting:</p>
+              {troubleshooting.map((tip, index) => (
+                <p key={index} className="text-red-600 mb-1">• {tip}</p>
+              ))}
+            </div>
+            
+            <button 
+              onClick={() => window.location.reload()} 
+              className="mt-3 px-4 py-2 bg-red-600 text-white text-sm rounded hover:bg-red-700"
+            >
+              🔄 Retry
+            </button>
           </div>
         </div>
       );
@@ -866,7 +908,14 @@ const App: React.FC = () => {
           </div>
         </div>
       ) : (
-        <Wrapper apiKey={apiKey} libraries={['marker']} render={render}>
+        <Wrapper 
+          apiKey={apiKey} 
+          libraries={['marker']} 
+          render={render}
+          version="weekly"
+          region="TW"
+          language="zh-TW"
+        >
           <PoopMap poops={getVisiblePoops()} />
         </Wrapper>
       )}
