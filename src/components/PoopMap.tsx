@@ -151,7 +151,7 @@ const MapComponent: React.FC<{
       setMap(new (window as any).google.maps.Map(ref.current, {
         center,
         zoom,
-        // mapId: 'poop-map-style', // Removed to avoid requiring cloud setup
+        mapId: 'DEMO_MAP_ID', // Simple map ID to enable AdvancedMarkerElement
         disableDefaultUI: true,
         gestureHandling: 'greedy'
       }));
