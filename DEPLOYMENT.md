@@ -36,7 +36,7 @@
    - 在部署頁面點擊 "Environment Variables"
    - 添加：
      ```
-     VITE_GOOGLE_MAPS_API_KEY = AIzaSyAXX7GnfPOy6GO0HNzIw9mzDKYQnwMrcLg
+     VITE_GOOGLE_MAPS_API_KEY = 你的_Google_MAP_API_KEY
      VITE_GOOGLE_CLIENT_ID = 你的_Google_Client_ID
      ```
 
