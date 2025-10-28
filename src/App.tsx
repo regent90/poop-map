@@ -590,7 +590,7 @@ const App: React.FC = () => {
     localStorage.setItem(`friendRequests_${user.email}`, JSON.stringify(newRequests));
   };
 
-  const handleAddFriend = (email: string) => {
+  const handleAddFriend = async (email: string) => {
     if (!user?.email || email === user.email) {
       alert('Cannot add yourself as a friend!');
       return;
@@ -620,73 +620,148 @@ const App: React.FC = () => {
       status: 'pending'
     };
 
-    // Save to global friend requests (so other users can see it)
-    const globalRequests = JSON.parse(localStorage.getItem('globalFriendRequests') || '[]');
-    globalRequests.push(newRequest);
-    localStorage.setItem('globalFriendRequests', JSON.stringify(globalRequests));
+    try {
+      if (useFirebase && isOnline && firebaseReady) {
+        // Send to Firebase
+        await sendFriendRequest(newRequest);
+        console.log('✅ Friend request sent to Firebase');
+        alert(`📤 Friend request sent to ${email}!\n\n🔄 The request will appear in real-time on their device!`);
+      } else {
+        // Fallback to localStorage
+        console.log('📱 Using localStorage fallback for friend request');
+        
+        // Save to global friend requests (so other users can see it)
+        const globalRequests = JSON.parse(localStorage.getItem('globalFriendRequests') || '[]');
+        globalRequests.push(newRequest);
+        localStorage.setItem('globalFriendRequests', JSON.stringify(globalRequests));
 
-    // Add to target user's friend requests
-    const targetRequests = JSON.parse(localStorage.getItem(`friendRequests_${email}`) || '[]');
-    targetRequests.push(newRequest);
-    localStorage.setItem(`friendRequests_${email}`, JSON.stringify(targetRequests));
+        // Add to target user's friend requests
+        const targetRequests = JSON.parse(localStorage.getItem(`friendRequests_${email}`) || '[]');
+        targetRequests.push(newRequest);
+        localStorage.setItem(`friendRequests_${email}`, JSON.stringify(targetRequests));
 
-    alert(`📤 Friend request sent to ${email}!\n\n💡 Tip: Switch to "${email}" user to see and accept the request!`);
+        alert(`📤 Friend request sent to ${email}!\n\n💡 Tip: Switch to "${email}" user to see and accept the request!`);
+      }
+    } catch (error) {
+      console.error('❌ Failed to send friend request:', error);
+      alert('❌ Failed to send friend request. Please try again.');
+    }
   };
 
-  const handleAcceptRequest = (requestId: string) => {
+  const handleAcceptRequest = async (requestId: string) => {
     const request = friendRequests.find(r => r.id === requestId);
     if (!request || !user?.email) return;
 
-    // Add requester to current user's friends list
-    const newFriend: Friend = {
-      id: request.fromUserId,
-      name: request.fromUserName,
-      email: request.fromUserEmail,
-      picture: request.fromUserPicture,
-      status: 'accepted',
-      addedAt: Date.now()
-    };
+    try {
+      if (useFirebase && isOnline && firebaseReady) {
+        // Update request status in Firebase
+        await updateFriendRequestStatus(requestId, 'accepted');
+        console.log('✅ Friend request accepted in Firebase');
 
-    const updatedFriends = [...friends, newFriend];
-    setFriends(updatedFriends);
-    saveFriends(updatedFriends);
+        // Add requester to current user's friends list in Firebase
+        const newFriend: Friend = {
+          id: request.fromUserId,
+          name: request.fromUserName,
+          email: request.fromUserEmail,
+          picture: request.fromUserPicture,
+          status: 'accepted',
+          addedAt: Date.now()
+        };
 
-    // Add current user to requester's friends list (mutual friendship)
-    const requesterFriends = JSON.parse(localStorage.getItem(`friends_${request.fromUserEmail}`) || '[]');
-    const mutualFriend: Friend = {
-      id: user.email,
-      name: user.name || 'Unknown',
-      email: user.email,
-      picture: user.picture,
-      status: 'accepted',
-      addedAt: Date.now()
-    };
+        await saveFriendToCloud(user.email, newFriend);
 
-    requesterFriends.push(mutualFriend);
-    localStorage.setItem(`friends_${request.fromUserEmail}`, JSON.stringify(requesterFriends));
+        // Add current user to requester's friends list (mutual friendship)
+        const mutualFriend: Friend = {
+          id: user.email,
+          name: user.name || 'Unknown',
+          email: user.email,
+          picture: user.picture,
+          status: 'accepted',
+          addedAt: Date.now()
+        };
 
-    // Remove from current user's requests
-    const updatedRequests = friendRequests.filter(r => r.id !== requestId);
-    setFriendRequests(updatedRequests);
-    saveFriendRequests(updatedRequests);
+        await saveFriendToCloud(request.fromUserEmail, mutualFriend);
 
-    // Remove from global requests
-    const globalRequests = JSON.parse(localStorage.getItem('globalFriendRequests') || '[]');
-    const updatedGlobalRequests = globalRequests.filter((r: FriendRequest) => r.id !== requestId);
-    localStorage.setItem('globalFriendRequests', JSON.stringify(updatedGlobalRequests));
+        // Update local state (real-time listeners will also update this)
+        const updatedFriends = [...friends, newFriend];
+        setFriends(updatedFriends);
 
-    alert(`✅ You are now friends with ${request.fromUserName}!`);
-    
-    // Reload friends' poops after accepting friend request
-    setTimeout(() => {
-      loadFriendsPoops();
-    }, 100);
+        alert(`✅ Friend request accepted!\n\n👥 You and ${request.fromUserName} are now friends!`);
+      } else {
+        // Fallback to localStorage
+        console.log('📱 Using localStorage fallback for accepting friend request');
+        
+        // Add requester to current user's friends list
+        const newFriend: Friend = {
+          id: request.fromUserId,
+          name: request.fromUserName,
+          email: request.fromUserEmail,
+          picture: request.fromUserPicture,
+          status: 'accepted',
+          addedAt: Date.now()
+        };
+
+        const updatedFriends = [...friends, newFriend];
+        setFriends(updatedFriends);
+        saveFriends(updatedFriends);
+
+        // Add current user to requester's friends list (mutual friendship)
+        const requesterFriends = JSON.parse(localStorage.getItem(`friends_${request.fromUserEmail}`) || '[]');
+        const mutualFriend: Friend = {
+          id: user.email,
+          name: user.name || 'Unknown',
+          email: user.email,
+          picture: user.picture,
+          status: 'accepted',
+          addedAt: Date.now()
+        };
+
+        requesterFriends.push(mutualFriend);
+        localStorage.setItem(`friends_${request.fromUserEmail}`, JSON.stringify(requesterFriends));
+
+        // Remove from current user's requests
+        const updatedRequests = friendRequests.filter(r => r.id !== requestId);
+        setFriendRequests(updatedRequests);
+        saveFriendRequests(updatedRequests);
+
+        // Remove from global requests
+        const globalRequests = JSON.parse(localStorage.getItem('globalFriendRequests') || '[]');
+        const updatedGlobalRequests = globalRequests.filter((r: FriendRequest) => r.id !== requestId);
+        localStorage.setItem('globalFriendRequests', JSON.stringify(updatedGlobalRequests));
+
+        alert(`✅ You are now friends with ${request.fromUserName}!`);
+        
+        // Reload friends' poops after accepting friend request
+        setTimeout(() => {
+          loadFriendsPoops();
+        }, 100);
+      }
+    } catch (error) {
+      console.error('❌ Failed to accept friend request:', error);
+      alert('❌ Failed to accept friend request. Please try again.');
+    }
   };
 
-  const handleRejectRequest = (requestId: string) => {
-    const updatedRequests = friendRequests.filter(r => r.id !== requestId);
-    setFriendRequests(updatedRequests);
-    saveFriendRequests(updatedRequests);
+  const handleRejectRequest = async (requestId: string) => {
+    try {
+      if (useFirebase && isOnline && firebaseReady) {
+        // Update request status in Firebase
+        await updateFriendRequestStatus(requestId, 'rejected');
+        console.log('✅ Friend request rejected in Firebase');
+        
+        // Local state will be updated by real-time listener
+        alert('❌ Friend request rejected');
+      } else {
+        // Fallback to localStorage
+        console.log('📱 Using localStorage fallback for rejecting friend request');
+        const updatedRequests = friendRequests.filter(r => r.id !== requestId);
+        setFriendRequests(updatedRequests);
+        saveFriendRequests(updatedRequests);
+      }
+    } catch (error) {
+      console.error('❌ Failed to reject friend request:', error);
+      alert('❌ Failed to reject friend request. Please try again.');
+    }
   };
 
   const handleSwitchUser = (newUser: UserProfile) => {
