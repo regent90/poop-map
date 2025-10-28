@@ -10,6 +10,20 @@ import { FriendsModal } from './components/FriendsModal';
 import { UserSwitcher } from './components/UserSwitcher';
 import { PoopIcon, SpinnerIcon } from './components/icons';
 import { Wrapper, Status } from "@googlemaps/react-wrapper";
+// Firebase imports
+import { 
+  savePoopToCloud, 
+  getUserPoops, 
+  getFriendsPoops, 
+  getPublicPoops,
+  saveFriendToCloud,
+  getUserFriends,
+  sendFriendRequest,
+  getUserFriendRequests,
+  updateFriendRequestStatus,
+  subscribeToUserPoops,
+  subscribeToFriendRequests
+} from './services/database';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -27,6 +41,8 @@ const App: React.FC = () => {
   const [friends, setFriends] = useState<Friend[]>([]);
   const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
   const [allPoops, setAllPoops] = useState<Poop[]>([]); // All poops including friends'
+  const [useFirebase, setUseFirebase] = useState(true); // Toggle between Firebase and localStorage
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   const t: TranslationStrings = translations[lang];
 
@@ -60,13 +76,32 @@ const App: React.FC = () => {
     }
   };
 
+  // Monitor online status
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
   useEffect(() => {
     // Load user from localStorage first
     const storedUser = localStorage.getItem('poopMapUser');
     if (storedUser) {
       const userData = JSON.parse(storedUser);
       setUser(userData);
-      loadPoops(userData.email);
+      
+      if (useFirebase && isOnline) {
+        loadFirebaseData(userData.email);
+      } else {
+        loadPoops(userData.email);
+      }
       
       // Check storage usage (monitoring only, no deletion)
       checkStorageUsage();
@@ -139,43 +174,40 @@ const App: React.FC = () => {
     }
   };
 
-  const savePoops = (newPoops: Poop[]) => {
+  const savePoops = async (newPoops: Poop[]) => {
     if (!user || !user.email) return;
+    
+    // Always save to localStorage as backup
     try {
-      // Save all poop data including photos
       localStorage.setItem(`poops_${user.email}`, JSON.stringify(newPoops));
-      console.log(`💾 Saved ${newPoops.length} poops for ${user.email}`);
+      console.log(`💾 Saved ${newPoops.length} poops to localStorage for ${user.email}`);
     } catch (error) {
-      console.error('Failed to save poops:', error);
-      
-      if (error instanceof DOMException && error.code === 22) {
-        // Storage quota exceeded - inform user but don't delete data
-        alert(`⚠️ 儲存空間已滿！
-        
-🔍 目前狀況：
-• 你有 ${newPoops.length} 筆珍貴的便便記錄
-• 瀏覽器儲存空間已達上限
-
-💡 解決方案：
-1. 匯出資料備份（建議）
-2. 清理瀏覽器其他網站資料
-3. 升級到雲端儲存版本
-
-❌ 我們不會刪除你的便便記錄！`);
-        
-        // Try to save without photos as fallback
-        try {
-          const poopsWithoutPhotos = newPoops.map(poop => ({
-            ...poop,
-            photo: poop.photo ? '[Photo removed to save space]' : undefined
-          }));
-          localStorage.setItem(`poops_${user.email}`, JSON.stringify(poopsWithoutPhotos));
-          console.log('💾 Saved poops without photos as fallback');
-          alert('📷 照片已暫時移除以節省空間，其他資料已保存');
-        } catch (e) {
-          console.error('Even fallback save failed:', e);
-          alert('❌ 無法儲存資料，請清理瀏覽器儲存空間');
+      console.error('Failed to save to localStorage:', error);
+    }
+    
+    // Save to Firebase if online
+    if (useFirebase && isOnline) {
+      try {
+        // Save each new poop to Firebase
+        const lastPoop = newPoops[newPoops.length - 1];
+        if (lastPoop && !lastPoop.id.includes('firebase-')) {
+          const firebaseId = await savePoopToCloud(lastPoop);
+          console.log(`☁️ Saved poop to Firebase with ID: ${firebaseId}`);
+          
+          // Update the poop with Firebase ID
+          const updatedPoops = [...newPoops];
+          updatedPoops[updatedPoops.length - 1] = {
+            ...lastPoop,
+            id: `firebase-${firebaseId}`
+          };
+          setPoops(updatedPoops);
+          
+          // Update localStorage with Firebase ID
+          localStorage.setItem(`poops_${user.email}`, JSON.stringify(updatedPoops));
         }
+      } catch (error) {
+        console.error('Failed to save to Firebase:', error);
+        console.log('📱 Saved to localStorage only (offline mode)');
       }
     }
   };
@@ -328,10 +360,66 @@ const App: React.FC = () => {
     }
   };
 
+  const loadFirebaseData = async (userEmail: string) => {
+    if (!userEmail) return;
+    
+    try {
+      console.log('Loading data from Firebase for:', userEmail);
+      
+      // Load user's poops
+      const userPoops = await getUserPoops(userEmail);
+      setPoops(userPoops);
+      console.log(`Loaded ${userPoops.length} user poops from Firebase`);
+      
+      // Load friends
+      const userFriends = await getUserFriends(userEmail);
+      setFriends(userFriends);
+      console.log(`Loaded ${userFriends.length} friends from Firebase`);
+      
+      // Load friend requests
+      const requests = await getUserFriendRequests(userEmail);
+      setFriendRequests(requests);
+      console.log(`Loaded ${requests.length} friend requests from Firebase`);
+      
+      // Load friends' poops and public poops
+      const friendEmails = userFriends.map(f => f.email);
+      const [friendsPoops, publicPoops] = await Promise.all([
+        getFriendsPoops(friendEmails),
+        getPublicPoops()
+      ]);
+      
+      // Combine all visible poops
+      const allVisiblePoops = [
+        ...userPoops,
+        ...friendsPoops,
+        ...publicPoops.filter(poop => poop.userId !== userEmail) // Avoid duplicates
+      ];
+      
+      // Remove duplicates
+      const uniquePoops = allVisiblePoops.filter((poop, index, self) => 
+        index === self.findIndex(p => p.id === poop.id)
+      );
+      
+      setAllPoops(uniquePoops);
+      console.log(`Total visible poops: ${uniquePoops.length}`);
+      
+    } catch (error) {
+      console.error('Error loading Firebase data:', error);
+      // Fallback to localStorage
+      loadPoops(userEmail);
+      loadFriends(userEmail);
+    }
+  };
+
   const loadFriendsPoops = () => {
+    if (useFirebase && isOnline && user?.email) {
+      loadFirebaseData(user.email);
+      return;
+    }
+    
     if (!user?.email) return;
     
-    console.log('Loading friends poops for:', friends.length, 'friends');
+    console.log('Loading friends poops from localStorage for:', friends.length, 'friends');
     
     // Start with current user's poops
     let allVisiblePoops = [...poops];
@@ -881,6 +969,35 @@ const App: React.FC = () => {
           🧪 添加示範資料
         </button>
         
+        {/* Firebase/localStorage toggle */}
+        <button
+          onClick={() => {
+            setUseFirebase(!useFirebase);
+            const newMode = !useFirebase;
+            alert(`${newMode ? '☁️' : '💾'} 切換到 ${newMode ? 'Firebase 雲端' : 'localStorage 本地'} 模式！
+            
+${newMode ? '✅ 跨瀏覽器同步\n✅ 真實多用戶\n✅ 即時更新' : '✅ 離線可用\n✅ 快速存取\n✅ 隱私保護'}
+
+${isOnline ? '🌐 目前在線' : '📱 目前離線'}`);
+            
+            if (user?.email) {
+              if (newMode && isOnline) {
+                loadFirebaseData(user.email);
+              } else {
+                loadPoops(user.email);
+                loadFriends(user.email);
+              }
+            }
+          }}
+          className={`px-4 py-2 text-white text-sm rounded-lg transition-colors ${
+            useFirebase 
+              ? 'bg-blue-600 hover:bg-blue-700' 
+              : 'bg-gray-600 hover:bg-gray-700'
+          }`}
+        >
+          {useFirebase ? '☁️ Firebase' : '💾 本地'} {!isOnline && '(離線)'}
+        </button>
+        
         {/* Reload friends poops button */}
         <button
           onClick={() => {
@@ -890,6 +1007,8 @@ const App: React.FC = () => {
 📊 目前狀況：
 • ${friends.length} 位好友
 • ${allPoops.length} 筆可見便便
+• 模式：${useFirebase ? 'Firebase 雲端' : 'localStorage 本地'}
+• 網路：${isOnline ? '在線' : '離線'}
 • 檢查 Console 查看詳細資訊`);
           }}
           className="px-4 py-2 bg-orange-600 text-white text-sm rounded-lg hover:bg-orange-700 transition-colors"
