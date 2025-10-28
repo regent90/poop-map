@@ -745,11 +745,41 @@ const App: React.FC = () => {
 
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
 
+  // Debug API key loading
+  console.log('🗺️ Google Maps API Key loaded:', apiKey ? 'Yes' : 'No');
+  console.log('🔑 API Key length:', apiKey.length);
+
   const render = (status: Status) => {
+    console.log('🗺️ Google Maps loading status:', status);
+    
     if (status === Status.FAILURE) {
-      return <div className="h-full w-full flex items-center justify-center bg-red-100"><p className="text-red-600">Error: Could not load Google Maps. Please check the API key.</p></div>;
+      const errorMessage = !apiKey 
+        ? 'Google Maps API key is missing. Please check environment variables.'
+        : 'Failed to load Google Maps. Please check API key permissions and network connection.';
+      
+      return (
+        <div className="h-full w-full flex items-center justify-center bg-red-100">
+          <div className="text-center p-4">
+            <p className="text-red-600 font-semibold mb-2">Google Maps Loading Error</p>
+            <p className="text-red-500 text-sm">{errorMessage}</p>
+            {!apiKey && (
+              <p className="text-red-400 text-xs mt-2">
+                Expected: VITE_GOOGLE_MAPS_API_KEY environment variable
+              </p>
+            )}
+          </div>
+        </div>
+      );
     }
-    return <div className="h-full w-full flex items-center justify-center bg-gray-200"><SpinnerIcon className="h-12 w-12 animate-spin text-gray-500" /></div>;
+    
+    return (
+      <div className="h-full w-full flex items-center justify-center bg-gray-200">
+        <div className="text-center">
+          <SpinnerIcon className="h-12 w-12 animate-spin text-gray-500 mx-auto mb-2" />
+          <p className="text-gray-600">Loading Google Maps...</p>
+        </div>
+      </div>
+    );
   };
 
   // Show login screen if user is not logged in
@@ -825,9 +855,21 @@ const App: React.FC = () => {
         friendsCount={friends.length}
       />
 
-      <Wrapper apiKey={apiKey} libraries={['marker']} render={render}>
-        <PoopMap poops={getVisiblePoops()} />
-      </Wrapper>
+      {!apiKey ? (
+        <div className="h-full w-full flex items-center justify-center bg-red-100">
+          <div className="text-center p-4">
+            <p className="text-red-600 font-semibold mb-2">⚠️ Configuration Error</p>
+            <p className="text-red-500 text-sm mb-2">Google Maps API key is missing</p>
+            <p className="text-red-400 text-xs">
+              Please set VITE_GOOGLE_MAPS_API_KEY in environment variables
+            </p>
+          </div>
+        </div>
+      ) : (
+        <Wrapper apiKey={apiKey} libraries={['marker']} render={render}>
+          <PoopMap poops={getVisiblePoops()} />
+        </Wrapper>
+      )}
 
       <div className="absolute bottom-20 right-4 z-10 text-right">
         {error && <p className="bg-red-500 text-white p-2 rounded-md mb-2">{error}</p>}
