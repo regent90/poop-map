@@ -328,6 +328,51 @@ const App: React.FC = () => {
     }
   };
 
+  const loadFriendsPoops = () => {
+    if (!user?.email) return;
+    
+    console.log('Loading friends poops for:', friends.length, 'friends');
+    
+    // Start with current user's poops
+    let allVisiblePoops = [...poops];
+    
+    // Load each friend's poops
+    friends.forEach(friend => {
+      const friendPoops = localStorage.getItem(`poops_${friend.email}`);
+      if (friendPoops) {
+        try {
+          const parsedPoops: Poop[] = JSON.parse(friendPoops);
+          console.log(`Found ${parsedPoops.length} poops for friend ${friend.name}`);
+          
+          // Filter based on privacy settings
+          const visibleFriendPoops = parsedPoops.filter(poop => {
+            // Always show public poops
+            if (poop.privacy === 'public') return true;
+            
+            // Show friends-only poops if we're friends
+            if (poop.privacy === 'friends') return true;
+            
+            // Never show private poops
+            return false;
+          });
+          
+          console.log(`${visibleFriendPoops.length} visible poops from ${friend.name}`);
+          allVisiblePoops = [...allVisiblePoops, ...visibleFriendPoops];
+        } catch (error) {
+          console.error(`Error loading poops for ${friend.email}:`, error);
+        }
+      }
+    });
+    
+    // Remove duplicates and update allPoops
+    const uniquePoops = allVisiblePoops.filter((poop, index, self) => 
+      index === self.findIndex(p => p.id === poop.id)
+    );
+    
+    console.log(`Total visible poops: ${uniquePoops.length}`);
+    setAllPoops(uniquePoops);
+  };
+
   const saveFriends = (newFriends: Friend[]) => {
     if (!user?.email) return;
     localStorage.setItem(`friends_${user.email}`, JSON.stringify(newFriends));
@@ -424,6 +469,11 @@ const App: React.FC = () => {
     localStorage.setItem('globalFriendRequests', JSON.stringify(updatedGlobalRequests));
 
     alert(`✅ You are now friends with ${request.fromUserName}!`);
+    
+    // Reload friends' poops after accepting friend request
+    setTimeout(() => {
+      loadFriendsPoops();
+    }, 100);
   };
 
   const handleRejectRequest = (requestId: string) => {
@@ -462,6 +512,13 @@ const App: React.FC = () => {
       loadFriends(user.email);
     }
   }, [user]);
+
+  // Load friends' poops when friends list changes
+  useEffect(() => {
+    if (user?.email && friends.length > 0) {
+      loadFriendsPoops();
+    }
+  }, [friends, user]);
 
   // Handle invite links
   useEffect(() => {
@@ -687,6 +744,73 @@ const App: React.FC = () => {
           📥 匯出資料
         </button>
         
+        {/* Import data button */}
+        <button
+          onClick={() => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = (e) => {
+              const file = (e.target as HTMLInputElement).files?.[0];
+              if (!file) return;
+              
+              const reader = new FileReader();
+              reader.onload = (e) => {
+                try {
+                  const importData = JSON.parse(e.target?.result as string);
+                  
+                  if (importData.poops && Array.isArray(importData.poops)) {
+                    const importedPoops = importData.poops;
+                    const mergedPoops = [...poops, ...importedPoops];
+                    
+                    // Remove duplicates based on ID
+                    const uniquePoops = mergedPoops.filter((poop, index, self) => 
+                      index === self.findIndex(p => p.id === poop.id)
+                    );
+                    
+                    setPoops(uniquePoops);
+                    savePoops(uniquePoops);
+                    
+                    // Also update allPoops
+                    setAllPoops(prev => {
+                      const otherUsersPoops = prev.filter(p => p.userId !== user?.email);
+                      return [...otherUsersPoops, ...uniquePoops];
+                    });
+                    
+                    alert(`📤 資料匯入成功！
+                    
+📊 匯入結果：
+• 匯入了 ${importedPoops.length} 筆便便記錄
+• 目前總計 ${uniquePoops.length} 筆記錄
+• 已自動去除重複資料`);
+                  }
+                  
+                  if (importData.friends && Array.isArray(importData.friends)) {
+                    const importedFriends = importData.friends;
+                    const mergedFriends = [...friends, ...importedFriends];
+                    
+                    // Remove duplicates based on email
+                    const uniqueFriends = mergedFriends.filter((friend, index, self) => 
+                      index === self.findIndex(f => f.email === friend.email)
+                    );
+                    
+                    setFriends(uniqueFriends);
+                    saveFriends(uniqueFriends);
+                  }
+                } catch (error) {
+                  alert('❌ 匯入失敗：檔案格式不正確');
+                  console.error('Import error:', error);
+                }
+              };
+              reader.readAsText(file);
+            };
+            input.click();
+          }}
+          className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          📤 匯入資料
+        </button>
+        
         {/* Test button for debugging */}
         <button
           onClick={() => {
@@ -755,6 +879,22 @@ const App: React.FC = () => {
           className="px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors"
         >
           🧪 添加示範資料
+        </button>
+        
+        {/* Reload friends poops button */}
+        <button
+          onClick={() => {
+            loadFriendsPoops();
+            alert(`🔄 重新載入好友便便！
+            
+📊 目前狀況：
+• ${friends.length} 位好友
+• ${allPoops.length} 筆可見便便
+• 檢查 Console 查看詳細資訊`);
+          }}
+          className="px-4 py-2 bg-orange-600 text-white text-sm rounded-lg hover:bg-orange-700 transition-colors"
+        >
+          🔄 載入好友便便
         </button>
 
         {/* Clear storage button */}
