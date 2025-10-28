@@ -169,17 +169,23 @@ export const getUserFriends = async (userId: string): Promise<Friend[]> => {
 };
 
 // Friend request operations
-export const sendFriendRequest = async (request: FriendRequest): Promise<void> => {
+export const sendFriendRequest = async (request: FriendRequest): Promise<string> => {
   try {
     // Filter out undefined fields to prevent Firebase errors
     const cleanRequest = Object.fromEntries(
       Object.entries(request).filter(([_, value]) => value !== undefined)
     );
     
-    await addDoc(collection(db, FRIEND_REQUESTS_COLLECTION), {
-      ...cleanRequest,
+    // Remove the client-generated ID since Firestore will generate its own
+    const { id, ...requestData } = cleanRequest;
+    
+    const docRef = await addDoc(collection(db, FRIEND_REQUESTS_COLLECTION), {
+      ...requestData,
       createdAt: Timestamp.now()
     });
+    
+    console.log('✅ Friend request sent with Firestore ID:', docRef.id);
+    return docRef.id;
   } catch (error) {
     console.error('Error sending friend request:', error);
     throw error;
@@ -206,13 +212,26 @@ export const getUserFriendRequests = async (userEmail: string): Promise<FriendRe
 
 export const updateFriendRequestStatus = async (requestId: string, status: 'accepted' | 'rejected'): Promise<void> => {
   try {
+    console.log('🔄 Updating friend request status:', { requestId, status });
     const requestRef = doc(db, FRIEND_REQUESTS_COLLECTION, requestId);
+    
+    // First check if the document exists
+    const docSnap = await getDoc(requestRef);
+    if (!docSnap.exists()) {
+      console.error('❌ Friend request document does not exist:', requestId);
+      throw new Error(`Friend request with ID ${requestId} not found`);
+    }
+    
+    console.log('📄 Found friend request document:', docSnap.data());
+    
     await updateDoc(requestRef, {
       status,
       updatedAt: Timestamp.now()
     });
+    
+    console.log('✅ Successfully updated friend request status');
   } catch (error) {
-    console.error('Error updating friend request:', error);
+    console.error('❌ Error updating friend request:', error);
     throw error;
   }
 };

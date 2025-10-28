@@ -623,8 +623,8 @@ const App: React.FC = () => {
     try {
       if (useFirebase && isOnline && firebaseReady) {
         // Send to Firebase
-        await sendFriendRequest(newRequest);
-        console.log('✅ Friend request sent to Firebase');
+        const firebaseId = await sendFriendRequest(newRequest);
+        console.log('✅ Friend request sent to Firebase with ID:', firebaseId);
         alert(`📤 Friend request sent to ${email}!\n\n🔄 The request will appear in real-time on their device!`);
       } else {
         // Fallback to localStorage
