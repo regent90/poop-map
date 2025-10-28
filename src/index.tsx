@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import App from './App';
-import './index.css';
+// import './index.css'; // Temporarily disabled to test CDN version
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
