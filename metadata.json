@@ -1,0 +1,7 @@
+{
+  "name": "Poop Map Clone",
+  "description": "A web application inspired by Poop Map, allowing users to log in with Google and mark locations on a map. Features multi-language support and saves data locally.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
