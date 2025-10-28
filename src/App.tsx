@@ -140,17 +140,61 @@ const App: React.FC = () => {
       const userData = JSON.parse(storedUser);
       setUser(userData);
       
-      if (useFirebase && isOnline && firebaseReady) {
-        loadFirebaseData(userData.email);
-      } else {
-        loadPoops(userData.email);
-        loadFriends(userData.email);
-      }
-      
       // Check storage usage (monitoring only, no deletion)
       checkStorageUsage();
     }
+  }, []);
 
+  // Load user data when Firebase is ready or user changes
+  useEffect(() => {
+    if (user?.email) {
+      if (useFirebase && isOnline && firebaseReady) {
+        console.log('🔄 Auto-loading Firebase data for:', user.email);
+        loadFirebaseData(user.email);
+      } else {
+        console.log('📱 Loading local data for:', user.email);
+        loadPoops(user.email);
+        loadFriends(user.email);
+      }
+    }
+  }, [user, useFirebase, isOnline, firebaseReady]);
+
+  // Set up real-time listeners for Firebase
+  useEffect(() => {
+    if (user?.email && useFirebase && isOnline && firebaseReady) {
+      console.log('🔄 Setting up real-time listeners for:', user.email);
+      
+      // Listen to friend requests
+      const unsubscribeFriendRequests = subscribeToFriendRequests(
+        user.email,
+        (requests) => {
+          console.log(`📨 Received ${requests.length} friend requests via real-time listener`);
+          setFriendRequests(requests);
+        }
+      );
+
+      // Listen to user's poops
+      const unsubscribePoops = subscribeToUserPoops(
+        user.email,
+        (userPoops) => {
+          console.log(`💩 Received ${userPoops.length} user poops via real-time listener`);
+          setPoops(userPoops);
+          
+          // Also reload all visible poops to include friends' and public poops
+          loadFirebaseData(user.email);
+        }
+      );
+
+      // Cleanup listeners on unmount or user change
+      return () => {
+        console.log('🔄 Cleaning up real-time listeners');
+        unsubscribeFriendRequests();
+        unsubscribePoops();
+      };
+    }
+  }, [user?.email, useFirebase, isOnline, firebaseReady]);
+
+  useEffect(() => {
     // Load language preference
     const storedLang = localStorage.getItem('poopMapLang');
     if (storedLang && Object.keys(translations).includes(storedLang)) {
@@ -310,16 +354,7 @@ const App: React.FC = () => {
         const lng = position.coords.longitude;
 
         try {
-          // TEMPORARILY DISABLED: Geocoding API has permission issues
-          // Will re-enable after API key is properly configured
-          console.log('⚠️ Geocoding temporarily disabled due to API permissions');
-          
-          // Skip geocoding and proceed directly to poop details modal
-          setPendingPoopData({ lat, lng });
-          setShowPoopModal(true);
-          return;
-
-          /* ORIGINAL GEOCODING CODE - DISABLED
+          // Try to get place information from Google Maps Geocoding API
           const geocoder = new (window as any).google.maps.Geocoder();
           const response = await new Promise((resolve, reject) => {
             geocoder.geocode(
@@ -330,41 +365,42 @@ const App: React.FC = () => {
                   console.log('✅ Geocoding successful:', results[0].formatted_address);
                   resolve(results[0]);
                 } else {
-                  console.error('❌ Geocoding failed with status:', status);
-                  if (status === 'REQUEST_DENIED') {
-                    reject(new Error('Geocoding API access denied. Check API key permissions.'));
-                  } else if (status === 'OVER_QUERY_LIMIT') {
-                    reject(new Error('Geocoding API quota exceeded.'));
-                  } else {
-                    reject(new Error(`Geocoding failed with status: ${status}`));
-                  }
+                  console.warn('⚠️ Geocoding failed with status:', status);
+                  // Don't reject, just resolve with null to continue without address
+                  resolve(null);
                 }
               }
             );
           });
-          */
 
           const result = response as any;
-          const address = result.formatted_address;
+          let address = '';
           let placeName = '';
 
-          // Try to find a place name from the address components
-          for (const component of result.address_components) {
-            if (component.types.includes('establishment') ||
-              component.types.includes('point_of_interest')) {
-              placeName = component.long_name;
-              break;
+          if (result) {
+            // Geocoding successful
+            address = result.formatted_address;
+            
+            // Try to find a place name from the address components
+            for (const component of result.address_components) {
+              if (component.types.includes('establishment') ||
+                component.types.includes('point_of_interest')) {
+                placeName = component.long_name;
+                break;
+              }
             }
+          } else {
+            console.log('📍 Proceeding without address information');
           }
 
           // Set pending data and show modal
           setPendingPoopData({
             lat,
             lng,
-            address,
+            address: address || undefined,
             placeName: placeName || undefined
           });
-          setShowDetailsModal(true);
+          setShowPoopModal(true);
           setIsDropping(false);
 
         } catch (error) {
@@ -1206,7 +1242,7 @@ const App: React.FC = () => {
                 return;
               }
 
-              // Test basic Maps API (without Geocoding)
+              // Test Geocoding API
               console.log('✅ Google Maps API loaded successfully');
               console.log('📍 Available services:', {
                 Map: !!google.maps.Map,
@@ -1215,7 +1251,28 @@ const App: React.FC = () => {
                 Geocoder: !!google.maps.Geocoder
               });
 
-              alert(`✅ Google Maps API 連接成功！\n\n📍 測試結果：\n• Maps API: 正常載入\n• 地圖功能: 可用\n• 狀態: 正常運作\n\n⚠️ 注意：Geocoding API 暫時禁用\n需要修復 API 金鑰權限`);
+              // Test Geocoding with error handling
+              const geocoder = new google.maps.Geocoder();
+              try {
+                const testResult = await new Promise((resolve, reject) => {
+                  geocoder.geocode(
+                    { location: { lat: 25.0330, lng: 121.5654 } }, // 台北101
+                    (results: any, status: any) => {
+                      if (status === 'OK' && results[0]) {
+                        resolve(results[0]);
+                      } else {
+                        reject(new Error(`Geocoding failed: ${status}`));
+                      }
+                    }
+                  );
+                });
+
+                const result = testResult as any;
+                alert(`✅ Google APIs 連接成功！\n\n📍 測試結果：\n• Maps API: 正常載入\n• Geocoding API: 正常運作\n• 測試地址: ${result.formatted_address}\n• 狀態: 完全正常`);
+              } catch (geocodingError) {
+                console.warn('Geocoding test failed:', geocodingError);
+                alert(`⚠️ Google Maps API 部分正常\n\n📍 測試結果：\n• Maps API: 正常載入\n• Geocoding API: ${geocodingError.message}\n• 地圖功能: 可用\n• 地址查詢: 可能受限\n\n💡 地圖仍可正常使用，只是沒有地址信息`);
+              }
               
             } catch (error) {
               console.error('Google API test failed:', error);
