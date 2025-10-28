@@ -5,9 +5,10 @@ interface MarkerProps {
   map?: any;
   position: { lat: number, lng: number };
   poop: Poop;
+  onPoopClick?: (poop: Poop) => void;
 }
 
-const Marker: React.FC<MarkerProps> = ({ map, position, poop }) => {
+const Marker: React.FC<MarkerProps> = ({ map, position, poop, onPoopClick }) => {
   const markerRef = useRef<any | null>(null);
 
   useEffect(() => {
@@ -64,51 +65,12 @@ const Marker: React.FC<MarkerProps> = ({ map, position, poop }) => {
           });
         }
         
-        // Add click handler to show info
+        // Add click handler
         markerRef.current.addListener('click', () => {
-          const date = new Date(poop.timestamp);
-          const rating = poop.rating ? '⭐'.repeat(Math.floor(poop.rating)) + (poop.rating % 1 !== 0 ? '✨' : '') : '';
-          const location = poop.customLocation || poop.placeName || '';
-          
-          // Get current user from localStorage to check if this is their poop
-          const currentUserData = localStorage.getItem('poopMapUser');
-          const currentUser = currentUserData ? JSON.parse(currentUserData) : null;
-          const isOwnPoop = currentUser && poop.userId === currentUser.email;
-          
-          // Only show photo if it's the user's own poop
-          let photoHtml = '';
-          if (poop.photo && isOwnPoop) {
-            photoHtml = `<img src="${poop.photo}" style="width: 100%; max-width: 200px; height: 100px; object-fit: cover; border-radius: 4px; margin: 8px 0;" alt="Poop photo">`;
-          } else if (poop.photo && !isOwnPoop) {
-            photoHtml = `<p style="margin: 4px 0; font-size: 12px; color: #6b7280;">📷 Photo (private)</p>`;
+          console.log('🗺️ Poop marker clicked:', poop.id);
+          if (onPoopClick) {
+            onPoopClick(poop);
           }
-          
-          // Show privacy indicator
-          const privacyIcon = poop.privacy === 'private' ? '🔒' : poop.privacy === 'friends' ? '👥' : '🌍';
-          const privacyText = poop.privacy === 'private' ? 'Private' : poop.privacy === 'friends' ? 'Friends Only' : 'Public';
-          
-          const infoWindow = new (window as any).google.maps.InfoWindow({
-            content: `
-              <div style="padding: 8px; max-width: 250px;">
-                <h3 style="color: #92400e; font-weight: bold; margin: 0 0 8px 0;">💩 Poop Drop</h3>
-                ${!isOwnPoop ? `<p style="margin: 4px 0; font-size: 12px; color: #6b7280;">👤 ${poop.userId}</p>` : ''}
-                <p style="margin: 4px 0; font-size: 14px; color: #4b5563;">
-                  📅 ${date.toLocaleString()}
-                </p>
-                ${location ? `<p style="margin: 4px 0; font-size: 12px; color: #6b7280;">📍 ${location}</p>` : ''}
-                ${rating ? `<p style="margin: 4px 0; font-size: 14px;">Rating: ${rating} (${poop.rating}/5)</p>` : ''}
-                ${photoHtml}
-                ${poop.notes && isOwnPoop ? `<p style="margin: 4px 0; font-size: 12px; color: #6b7280; font-style: italic;">"${poop.notes}"</p>` : ''}
-                <p style="margin: 4px 0; font-size: 10px; color: #9ca3af;">
-                  ${privacyIcon} ${privacyText}
-                </p>
-                <p style="margin: 4px 0; font-size: 10px; color: #9ca3af;">
-                  ${position.lat.toFixed(6)}, ${position.lng.toFixed(6)}
-                </p>
-              </div>
-            `
-          });
-          infoWindow.open(map, markerRef.current);
         });
         
         // Debug log
@@ -180,7 +142,12 @@ const MapComponent: React.FC<{
   );
 };
 
-export const PoopMap: React.FC<{ poops: Poop[] }> = ({ poops }) => {
+interface PoopMapProps {
+  poops: Poop[];
+  onPoopClick?: (poop: Poop) => void;
+}
+
+export const PoopMap: React.FC<PoopMapProps> = ({ poops, onPoopClick }) => {
   const [center, setCenter] = useState({ lat: 25.034, lng: 121.564 }); // Default to Taipei 101
   const [userLocation, setUserLocation] = useState<{ lat: number, lng: number } | null>(null);
 
@@ -214,7 +181,7 @@ export const PoopMap: React.FC<{ poops: Poop[] }> = ({ poops }) => {
       )}
       {/* Poop markers */}
       {poops.map((poop) => (
-        <Marker key={poop.id} position={{ lat: poop.lat, lng: poop.lng }} poop={poop} />
+        <Marker key={poop.id} position={{ lat: poop.lat, lng: poop.lng }} poop={poop} onPoopClick={onPoopClick} />
       ))}
     </MapComponent>
   );

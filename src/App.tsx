@@ -6,6 +6,7 @@ import { Header } from './components/Header';
 import { LoginScreen } from './components/LoginScreen';
 import { PoopDetailsModal } from './components/PoopDetailsModal';
 import { PoopDetailView } from './components/PoopDetailView';
+import { PoopDetailModal } from './components/PoopDetailModal';
 import { FriendsModal } from './components/FriendsModal';
 import { UserSwitcher } from './components/UserSwitcher';
 import { PoopIcon, SpinnerIcon } from './components/icons';
@@ -39,6 +40,7 @@ const App: React.FC = () => {
   const [showDetailView, setShowDetailView] = useState(false);
   const [selectedPoop, setSelectedPoop] = useState<Poop | null>(null);
   const [selectedPoopNumber, setSelectedPoopNumber] = useState(0);
+  const [showPoopDetailModal, setShowPoopDetailModal] = useState(false);
   const [showFriendsModal, setShowFriendsModal] = useState(false);
   const [friends, setFriends] = useState<Friend[]>([]);
   const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
@@ -795,6 +797,13 @@ const App: React.FC = () => {
     }
   };
 
+  // 處理地圖上便便標記的點擊
+  const handlePoopClick = (poop: Poop) => {
+    console.log('🗺️ Poop clicked from map:', poop.id);
+    setSelectedPoop(poop);
+    setShowPoopDetailModal(true);
+  };
+
   const handleSwitchUser = (newUser: UserProfile) => {
     // Save current user data
     if (user?.email) {
@@ -1079,7 +1088,7 @@ const App: React.FC = () => {
           region="TW"
           language="zh-TW"
         >
-          <PoopMap poops={getVisiblePoops()} />
+          <PoopMap poops={getVisiblePoops()} onPoopClick={handlePoopClick} />
         </Wrapper>
       )}
 
@@ -1340,6 +1349,15 @@ ${newMode ? '✅ 跨瀏覽器同步\n✅ 真實多用戶\n✅ 即時更新' : '�
         onAddFriend={handleAddFriend}
         onAcceptRequest={handleAcceptRequest}
         onRejectRequest={handleRejectRequest}
+      />
+
+      {/* Poop Detail Modal */}
+      <PoopDetailModal
+        isOpen={showPoopDetailModal}
+        onClose={() => setShowPoopDetailModal(false)}
+        poop={selectedPoop}
+        currentUser={user}
+        translations={t}
       />
     </div>
   );
