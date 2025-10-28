@@ -25,4 +25,30 @@ console.log('🔥 Firebase initialized:', {
   hasApiKey: !!firebaseConfig.apiKey
 });
 
+// Test Firestore connectivity
+import { connectFirestoreEmulator, enableNetwork, disableNetwork } from 'firebase/firestore';
+
+// Add connection state monitoring
+let isFirebaseConnected = true;
+
+export const checkFirebaseConnection = async (): Promise<boolean> => {
+  try {
+    await enableNetwork(db);
+    isFirebaseConnected = true;
+    console.log('🟢 Firebase connection: Online');
+    return true;
+  } catch (error) {
+    console.warn('🔴 Firebase connection: Offline or blocked', error);
+    isFirebaseConnected = false;
+    return false;
+  }
+};
+
+export const getFirebaseConnectionStatus = (): boolean => {
+  return isFirebaseConnected;
+};
+
+// Initialize connection check
+checkFirebaseConnection();
+
 export default app;

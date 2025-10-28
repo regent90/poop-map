@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { Poop } from '../types';
 
 interface MarkerProps {
-  map: any | undefined;
+  map?: any;
   position: { lat: number, lng: number };
   poop: Poop;
 }
@@ -13,28 +13,56 @@ const Marker: React.FC<MarkerProps> = ({ map, position, poop }) => {
   useEffect(() => {
     if (map) {
       if (!markerRef.current) {
-        // Create a custom icon using SVG
-        const poopSvg = `
-          <svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="20" cy="20" r="18" fill="#8B4513" stroke="#654321" stroke-width="2"/>
-            <text x="20" y="28" text-anchor="middle" font-size="20" fill="white">💩</text>
-          </svg>
-        `;
+        // Check if AdvancedMarkerElement is available, fallback to regular Marker
+        const google = (window as any).google;
         
-        const poopIcon = {
-          url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(poopSvg),
-          scaledSize: new (window as any).google.maps.Size(40, 40),
-          anchor: new (window as any).google.maps.Point(20, 20)
-        };
+        if (google?.maps?.marker?.AdvancedMarkerElement) {
+          // Create custom HTML element for the marker
+          const markerElement = document.createElement('div');
+          markerElement.innerHTML = '💩';
+          markerElement.style.fontSize = '24px';
+          markerElement.style.cursor = 'pointer';
+          markerElement.style.background = '#8B4513';
+          markerElement.style.borderRadius = '50%';
+          markerElement.style.width = '40px';
+          markerElement.style.height = '40px';
+          markerElement.style.display = 'flex';
+          markerElement.style.alignItems = 'center';
+          markerElement.style.justifyContent = 'center';
+          markerElement.style.border = '2px solid #654321';
+          markerElement.title = `Poop dropped on ${new Date(poop.timestamp).toLocaleString()}`;
 
-        // Create the standard Marker
-        markerRef.current = new (window as any).google.maps.Marker({
-          position,
-          map,
-          icon: poopIcon,
-          title: `Poop dropped on ${new Date(poop.timestamp).toLocaleString()}`,
-          animation: (window as any).google.maps.Animation.DROP
-        });
+          // Create AdvancedMarkerElement
+          markerRef.current = new google.maps.marker.AdvancedMarkerElement({
+            position,
+            map,
+            content: markerElement,
+            title: `Poop dropped on ${new Date(poop.timestamp).toLocaleString()}`
+          });
+        } else {
+          // Fallback to regular Marker with custom icon
+          const poopSvg = `
+            <svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="20" cy="20" r="18" fill="#8B4513" stroke="#654321" stroke-width="2"/>
+              <text x="20" y="28" text-anchor="middle" font-size="20" fill="white">💩</text>
+            </svg>
+          `;
+          
+          const poopIcon = {
+            url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(poopSvg),
+            scaledSize: new google.maps.Size(40, 40),
+            anchor: new google.maps.Point(20, 20)
+          };
+
+          // Create the standard Marker
+          markerRef.current = new google.maps.Marker({
+            position,
+            map,
+            icon: poopIcon,
+            title: `Poop dropped on ${new Date(poop.timestamp).toLocaleString()}`,
+            animation: google.maps.Animation.DROP
+          });
+        }
         
         // Add click handler to show info
         markerRef.current.addListener('click', () => {
@@ -199,28 +227,67 @@ const UserLocationMarker: React.FC<{ map?: any, position: { lat: number, lng: nu
   useEffect(() => {
     if (map) {
       if (!markerRef.current) {
-        // Create user location marker with blue dot
-        const userSvg = `
-          <svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="10" cy="10" r="8" fill="#3B82F6" stroke="white" stroke-width="2"/>
-            <circle cx="10" cy="10" r="3" fill="white"/>
-          </svg>
-        `;
+        const google = (window as any).google;
         
-        const userIcon = {
-          url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(userSvg),
-          scaledSize: new (window as any).google.maps.Size(20, 20),
-          anchor: new (window as any).google.maps.Point(10, 10)
-        };
-        
-        markerRef.current = new (window as any).google.maps.Marker({
-          position,
-          map,
-          icon: userIcon,
-          title: 'Your current location'
-        });
+        if (google?.maps?.marker?.AdvancedMarkerElement) {
+          // Create custom HTML element for user location
+          const userElement = document.createElement('div');
+          userElement.style.width = '20px';
+          userElement.style.height = '20px';
+          userElement.style.borderRadius = '50%';
+          userElement.style.background = '#3B82F6';
+          userElement.style.border = '2px solid white';
+          userElement.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)';
+          userElement.title = 'Your current location';
+          
+          // Add inner white dot
+          const innerDot = document.createElement('div');
+          innerDot.style.width = '6px';
+          innerDot.style.height = '6px';
+          innerDot.style.borderRadius = '50%';
+          innerDot.style.background = 'white';
+          innerDot.style.position = 'absolute';
+          innerDot.style.top = '50%';
+          innerDot.style.left = '50%';
+          innerDot.style.transform = 'translate(-50%, -50%)';
+          userElement.style.position = 'relative';
+          userElement.appendChild(innerDot);
+
+          markerRef.current = new google.maps.marker.AdvancedMarkerElement({
+            position,
+            map,
+            content: userElement,
+            title: 'Your current location'
+          });
+        } else {
+          // Fallback to regular Marker
+          const userSvg = `
+            <svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="10" cy="10" r="8" fill="#3B82F6" stroke="white" stroke-width="2"/>
+              <circle cx="10" cy="10" r="3" fill="white"/>
+            </svg>
+          `;
+          
+          const userIcon = {
+            url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(userSvg),
+            scaledSize: new google.maps.Size(20, 20),
+            anchor: new google.maps.Point(10, 10)
+          };
+          
+          markerRef.current = new google.maps.Marker({
+            position,
+            map,
+            icon: userIcon,
+            title: 'Your current location'
+          });
+        }
       } else {
-        markerRef.current.setPosition(position);
+        // Update position for both marker types
+        if (markerRef.current.position) {
+          markerRef.current.position = position;
+        } else if (markerRef.current.setPosition) {
+          markerRef.current.setPosition(position);
+        }
       }
     }
   }, [map, position]);

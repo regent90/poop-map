@@ -24,8 +24,13 @@ const USERS_COLLECTION = 'users';
 // Poop operations
 export const savePoopToCloud = async (poop: Poop): Promise<string> => {
   try {
+    // Filter out undefined fields to prevent Firebase errors
+    const cleanPoop = Object.fromEntries(
+      Object.entries(poop).filter(([_, value]) => value !== undefined)
+    );
+    
     const docRef = await addDoc(collection(db, POOPS_COLLECTION), {
-      ...poop,
+      ...cleanPoop,
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now()
     });
@@ -117,15 +122,21 @@ export const getPublicPoops = async (): Promise<Poop[]> => {
 // Friend operations
 export const saveFriendToCloud = async (userId: string, friend: Friend): Promise<void> => {
   try {
-    await addDoc(collection(db, FRIENDS_COLLECTION), {
+    const friendData = {
       userId,
       friendId: friend.id,
       friendEmail: friend.email,
       friendName: friend.name,
-      friendPicture: friend.picture,
       status: friend.status,
       addedAt: Timestamp.now()
-    });
+    };
+    
+    // Only add friendPicture if it's not undefined
+    if (friend.picture !== undefined) {
+      friendData.friendPicture = friend.picture;
+    }
+    
+    await addDoc(collection(db, FRIENDS_COLLECTION), friendData);
   } catch (error) {
     console.error('Error saving friend to cloud:', error);
     throw error;
@@ -160,8 +171,13 @@ export const getUserFriends = async (userId: string): Promise<Friend[]> => {
 // Friend request operations
 export const sendFriendRequest = async (request: FriendRequest): Promise<void> => {
   try {
+    // Filter out undefined fields to prevent Firebase errors
+    const cleanRequest = Object.fromEntries(
+      Object.entries(request).filter(([_, value]) => value !== undefined)
+    );
+    
     await addDoc(collection(db, FRIEND_REQUESTS_COLLECTION), {
-      ...request,
+      ...cleanRequest,
       createdAt: Timestamp.now()
     });
   } catch (error) {

@@ -12,6 +12,7 @@ import { PoopIcon, SpinnerIcon } from './components/icons';
 import { Wrapper, Status } from "@googlemaps/react-wrapper";
 // Firebase imports
 import './firebase'; // Initialize Firebase
+import { checkFirebaseConnection, getFirebaseConnectionStatus } from './firebase';
 import { 
   savePoopToCloud, 
   getUserPoops, 
@@ -102,19 +103,35 @@ const App: React.FC = () => {
     checkFirebaseConfig();
   }, []);
 
-  // Monitor online status
+  // Monitor online status and Firebase connection
   useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
+    const handleOnline = async () => {
+      setIsOnline(true);
+      console.log('🌐 Network: Online');
+      
+      // Test Firebase connection when coming back online
+      if (useFirebase) {
+        const isFirebaseConnected = await checkFirebaseConnection();
+        console.log(`🔥 Firebase: ${isFirebaseConnected ? 'Connected' : 'Blocked/Offline'}`);
+      }
+    };
+    
+    const handleOffline = () => {
+      setIsOnline(false);
+      console.log('🌐 Network: Offline');
+    };
     
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
+    
+    // Initial connection check
+    handleOnline();
     
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, []);
+  }, [useFirebase]);
 
   useEffect(() => {
     // Load user from localStorage first
@@ -212,9 +229,16 @@ const App: React.FC = () => {
       console.error('Failed to save to localStorage:', error);
     }
     
-    // Save to Firebase if online
+    // Save to Firebase if online and connected
     if (useFirebase && isOnline) {
       try {
+        // Check Firebase connection first
+        const isConnected = await checkFirebaseConnection();
+        if (!isConnected) {
+          console.warn('🔴 Firebase connection failed, saving to localStorage only');
+          return;
+        }
+
         // Save each new poop to Firebase
         const lastPoop = newPoops[newPoops.length - 1];
         if (lastPoop && !lastPoop.id.includes('firebase-')) {
@@ -234,7 +258,15 @@ const App: React.FC = () => {
         }
       } catch (error) {
         console.error('Failed to save to Firebase:', error);
-        console.log('📱 Saved to localStorage only (offline mode)');
+        
+        // Check if it's a network/blocking issue
+        if (error.message?.includes('ERR_BLOCKED_BY_CLIENT') || 
+            error.message?.includes('network') ||
+            error.code === 'unavailable') {
+          console.log('🚫 Firebase blocked by ad blocker or network issue - using offline mode');
+        } else {
+          console.log('📱 Saved to localStorage only (offline mode)');
+        }
       }
     }
   };
@@ -284,10 +316,19 @@ const App: React.FC = () => {
             geocoder.geocode(
               { location: { lat, lng } },
               (results: any, status: any) => {
+                console.log('🗺️ Geocoding status:', status);
                 if (status === 'OK' && results[0]) {
+                  console.log('✅ Geocoding successful:', results[0].formatted_address);
                   resolve(results[0]);
                 } else {
-                  reject(new Error('Geocoding failed'));
+                  console.error('❌ Geocoding failed with status:', status);
+                  if (status === 'REQUEST_DENIED') {
+                    reject(new Error('Geocoding API access denied. Check API key permissions.'));
+                  } else if (status === 'OVER_QUERY_LIMIT') {
+                    reject(new Error('Geocoding API quota exceeded.'));
+                  } else {
+                    reject(new Error(`Geocoding failed with status: ${status}`));
+                  }
                 }
               }
             );
@@ -1045,6 +1086,55 @@ const App: React.FC = () => {
           className="px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors"
         >
           🧪 測試 Firebase
+        </button>
+
+        {/* Google API test button */}
+        <button
+          onClick={async () => {
+            console.log('🗺️ Testing Google APIs...');
+            try {
+              const google = (window as any).google;
+              if (!google?.maps) {
+                alert('❌ Google Maps API 未載入！\n\n請檢查網路連線和 API 金鑰');
+                return;
+              }
+
+              // Test Geocoding API
+              const geocoder = new google.maps.Geocoder();
+              const testResult = await new Promise((resolve, reject) => {
+                geocoder.geocode(
+                  { location: { lat: 25.0330, lng: 121.5654 } }, // 台北101
+                  (results: any, status: any) => {
+                    if (status === 'OK' && results[0]) {
+                      resolve(results[0]);
+                    } else {
+                      reject(new Error(`Geocoding failed: ${status}`));
+                    }
+                  }
+                );
+              });
+
+              const result = testResult as any;
+              alert(`✅ Google APIs 連接成功！\n\n📍 測試結果：\n• 地址: ${result.formatted_address}\n• 狀態: 正常運作`);
+              
+            } catch (error) {
+              console.error('Google API test failed:', error);
+              let errorMessage = `❌ Google API 連接失敗！\n\n錯誤：${error}\n\n`;
+              
+              if (error.message?.includes('REQUEST_DENIED')) {
+                errorMessage += '可能原因：\n• API 金鑰權限不足\n• HTTP referrer 限制\n• Geocoding API 未啟用';
+              } else if (error.message?.includes('OVER_QUERY_LIMIT')) {
+                errorMessage += '可能原因：\n• API 配額已用完\n• 請求頻率過高';
+              } else {
+                errorMessage += '可能原因：\n• 網路連線問題\n• API 金鑰無效\n• 服務暫時不可用';
+              }
+              
+              alert(errorMessage);
+            }
+          }}
+          className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          🗺️ 測試 Google API
         </button>
         
         {/* Firebase/localStorage toggle */}
