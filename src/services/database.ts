@@ -221,8 +221,7 @@ export const updateFriendRequestStatus = async (requestId: string, status: 'acce
 export const subscribeToUserPoops = (userId: string, callback: (poops: Poop[]) => void) => {
   const q = query(
     collection(db, POOPS_COLLECTION),
-    where('userId', '==', userId),
-    orderBy('timestamp', 'desc')
+    where('userId', '==', userId)
   );
   
   return onSnapshot(q, (querySnapshot) => {
@@ -230,7 +229,10 @@ export const subscribeToUserPoops = (userId: string, callback: (poops: Poop[]) =
       id: doc.id,
       ...doc.data()
     } as Poop));
-    callback(poops);
+    
+    // Sort in JavaScript instead of Firestore to avoid index requirements
+    const sortedPoops = poops.sort((a, b) => b.timestamp - a.timestamp);
+    callback(sortedPoops);
   });
 };
 
@@ -241,11 +243,17 @@ export const subscribeToFriendRequests = (userEmail: string, callback: (requests
     where('status', '==', 'pending')
   );
   
-  return onSnapshot(q, (querySnapshot) => {
-    const requests = querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    } as FriendRequest));
-    callback(requests);
-  });
+  return onSnapshot(q, 
+    (querySnapshot) => {
+      const requests = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as FriendRequest));
+      console.log(`🔄 Firestore listener: Found ${requests.length} pending requests for ${userEmail}`);
+      callback(requests);
+    },
+    (error) => {
+      console.error('❌ Friend requests listener error:', error);
+    }
+  );
 };

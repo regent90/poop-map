@@ -168,7 +168,8 @@ const App: React.FC = () => {
       const unsubscribeFriendRequests = subscribeToFriendRequests(
         user.email,
         (requests) => {
-          console.log(`📨 Received ${requests.length} friend requests via real-time listener`);
+          console.log(`📨 Real-time update: ${requests.length} friend requests for ${user.email}`);
+          console.log('Friend requests:', requests.map(r => ({ from: r.fromUserEmail, status: r.status })));
           setFriendRequests(requests);
         }
       );
@@ -180,8 +181,12 @@ const App: React.FC = () => {
           console.log(`💩 Received ${userPoops.length} user poops via real-time listener`);
           setPoops(userPoops);
           
-          // Also reload all visible poops to include friends' and public poops
-          loadFirebaseData(user.email);
+          // Update allPoops with the new user poops
+          setAllPoops(prevAllPoops => {
+            // Remove old user poops and add new ones
+            const otherPoops = prevAllPoops.filter(poop => poop.userId !== user.email);
+            return [...userPoops, ...otherPoops];
+          });
         }
       );
 
@@ -1015,181 +1020,7 @@ const App: React.FC = () => {
           )}
         </button>
 
-        {/* Export data button */}
-        <button
-          onClick={() => {
-            if (!user?.email) return;
-            
-            const exportData = {
-              user: user,
-              poops: poops,
-              friends: friends,
-              exportDate: new Date().toISOString(),
-              version: '1.0'
-            };
-            
-            const dataStr = JSON.stringify(exportData, null, 2);
-            const dataBlob = new Blob([dataStr], { type: 'application/json' });
-            const url = URL.createObjectURL(dataBlob);
-            
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `poop-map-backup-${user.name}-${new Date().toISOString().split('T')[0]}.json`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-            
-            alert(`📥 便便記錄已匯出！
-            
-📊 匯出內容：
-• ${poops.length} 筆便便記錄
-• ${friends.length} 位好友
-• 完整的個人資料
 
-💾 檔案已下載到你的裝置`);
-          }}
-          className="px-4 py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 transition-colors"
-        >
-          📥 匯出資料
-        </button>
-        
-        {/* Import data button */}
-        <button
-          onClick={() => {
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = '.json';
-            input.onchange = (e) => {
-              const file = (e.target as HTMLInputElement).files?.[0];
-              if (!file) return;
-              
-              const reader = new FileReader();
-              reader.onload = (e) => {
-                try {
-                  const importData = JSON.parse(e.target?.result as string);
-                  
-                  if (importData.poops && Array.isArray(importData.poops)) {
-                    const importedPoops = importData.poops;
-                    const mergedPoops = [...poops, ...importedPoops];
-                    
-                    // Remove duplicates based on ID
-                    const uniquePoops = mergedPoops.filter((poop, index, self) => 
-                      index === self.findIndex(p => p.id === poop.id)
-                    );
-                    
-                    setPoops(uniquePoops);
-                    savePoops(uniquePoops);
-                    
-                    // Also update allPoops
-                    setAllPoops(prev => {
-                      const otherUsersPoops = prev.filter(p => p.userId !== user?.email);
-                      return [...otherUsersPoops, ...uniquePoops];
-                    });
-                    
-                    alert(`📤 資料匯入成功！
-                    
-📊 匯入結果：
-• 匯入了 ${importedPoops.length} 筆便便記錄
-• 目前總計 ${uniquePoops.length} 筆記錄
-• 已自動去除重複資料`);
-                  }
-                  
-                  if (importData.friends && Array.isArray(importData.friends)) {
-                    const importedFriends = importData.friends;
-                    const mergedFriends = [...friends, ...importedFriends];
-                    
-                    // Remove duplicates based on email
-                    const uniqueFriends = mergedFriends.filter((friend, index, self) => 
-                      index === self.findIndex(f => f.email === friend.email)
-                    );
-                    
-                    setFriends(uniqueFriends);
-                    saveFriends(uniqueFriends);
-                  }
-                } catch (error) {
-                  alert('❌ 匯入失敗：檔案格式不正確');
-                  console.error('Import error:', error);
-                }
-              };
-              reader.readAsText(file);
-            };
-            input.click();
-          }}
-          className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          📤 匯入資料
-        </button>
-        
-        {/* Test button for debugging */}
-        <button
-          onClick={() => {
-            const testPoop: Poop = {
-              id: 'test-' + Date.now(),
-              lat: 25.0330, // 台北101附近
-              lng: 121.5654,
-              timestamp: Date.now(),
-              rating: 4,
-              placeName: '台北101',
-              customLocation: '測試地點',
-              privacy: 'public',
-              userId: user?.email || 'demo',
-            };
-            const updatedPoops = [...poops, testPoop];
-            setPoops(updatedPoops);
-            savePoops(updatedPoops);
-          }}
-          className="px-4 py-2 bg-gray-600 text-white text-sm rounded-lg hover:bg-gray-700 transition-colors"
-        >
-          🧪 測試便便
-        </button>
-
-        {/* Add demo data button */}
-        <button
-          onClick={() => {
-            if (!user?.email) return;
-
-            // Add some demo poops for current user
-            const demoPoops: Poop[] = [
-              {
-                id: 'demo-poop-1',
-                lat: 25.0330,
-                lng: 121.5654,
-                timestamp: Date.now() - 3600000, // 1 hour ago
-                rating: 4.5,
-                placeName: '台北101',
-                customLocation: '101大樓 B1 廁所',
-                privacy: 'public',
-                userId: user.email,
-                notes: '很乾淨的廁所，五星推薦！'
-              },
-              {
-                id: 'demo-poop-2',
-                lat: 25.0417,
-                lng: 121.5654,
-                timestamp: Date.now() - 7200000, // 2 hours ago
-                rating: 2.5,
-                placeName: '台北車站',
-                privacy: 'friends',
-                userId: user.email,
-                notes: '人太多了，有點吵'
-              }
-            ];
-
-            const updatedPoops = [...poops, ...demoPoops];
-            setPoops(updatedPoops);
-            savePoops(updatedPoops);
-
-            // Also add to allPoops
-            const updatedAllPoops = [...allPoops, ...demoPoops];
-            setAllPoops(updatedAllPoops);
-
-            alert('Demo data added for current user!');
-          }}
-          className="px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors"
-        >
-          🧪 添加示範資料
-        </button>
         
         {/* Firebase test button */}
         <button
