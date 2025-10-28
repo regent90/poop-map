@@ -7,9 +7,5 @@
       "source": "/(.*)",
       "destination": "/index.html"
     }
-  ],
-  "env": {
-    "VITE_GOOGLE_MAPS_API_KEY": "@google_maps_api_key",
-    "VITE_GOOGLE_CLIENT_ID": "@google_client_id"
-  }
+  ]
 }

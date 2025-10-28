@@ -31,31 +31,45 @@ const App: React.FC = () => {
   const t: TranslationStrings = translations[lang];
 
   // Clean up localStorage on app start
-  const cleanupStorage = () => {
+  // Check storage usage (for monitoring only, no deletion)
+  const checkStorageUsage = () => {
     try {
-      // Remove any large or unnecessary data
+      const storageUsed = JSON.stringify(localStorage).length;
+      const storageMB = (storageUsed / 1024 / 1024).toFixed(2);
+      console.log(`📊 Storage usage: ${storageMB}MB`);
+      
+      if (storageUsed > 4000000) { // > 4MB
+        console.warn('⚠️ Storage is getting full. Consider using cloud storage for production.');
+      }
+      
+      // Count poops by user
       const keys = Object.keys(localStorage);
-      keys.forEach(key => {
-        if (key.startsWith('poops_') && key !== `poops_${user?.email}`) {
-          // Remove other users' data to free up space
-          localStorage.removeItem(key);
+      const poopKeys = keys.filter(key => key.startsWith('poops_'));
+      console.log(`💩 Total users with poop data: ${poopKeys.length}`);
+      
+      poopKeys.forEach(key => {
+        const data = localStorage.getItem(key);
+        if (data) {
+          const poops = JSON.parse(data);
+          const userEmail = key.replace('poops_', '');
+          console.log(`👤 ${userEmail}: ${poops.length} poops`);
         }
       });
     } catch (error) {
-      console.error('Cleanup failed:', error);
+      console.error('Storage check failed:', error);
     }
   };
 
   useEffect(() => {
-    // Clean up storage first
-    cleanupStorage();
-
-    // Load user from localStorage
+    // Load user from localStorage first
     const storedUser = localStorage.getItem('poopMapUser');
     if (storedUser) {
       const userData = JSON.parse(storedUser);
       setUser(userData);
       loadPoops(userData.email);
+      
+      // Check storage usage (monitoring only, no deletion)
+      checkStorageUsage();
     }
 
     // Load language preference
@@ -90,9 +104,11 @@ const App: React.FC = () => {
 
   const loadPoops = (userEmail?: string) => {
     if (!userEmail) return;
+    console.log('Loading poops for user:', userEmail);
     const storedPoops = localStorage.getItem(`poops_${userEmail}`);
     if (storedPoops) {
       const userPoops = JSON.parse(storedPoops);
+      console.log('Found stored poops:', userPoops.length);
 
       // Fix old poops that don't have userId
       const fixedPoops = userPoops.map((poop: Poop) => ({
@@ -103,9 +119,14 @@ const App: React.FC = () => {
 
       setPoops(fixedPoops);
 
-      // Save the fixed poops back to localStorage
-      if (fixedPoops.some((poop: Poop, index: number) =>
-        !userPoops[index].userId || !userPoops[index].privacy)) {
+      // Save the fixed poops back to localStorage only if there were actual changes
+      const hasChanges = fixedPoops.some((poop: Poop, index: number) => {
+        const originalPoop = userPoops[index];
+        return !originalPoop?.userId || !originalPoop?.privacy;
+      });
+      
+      if (hasChanges) {
+        console.log('Fixing old poop data and saving...');
         localStorage.setItem(`poops_${userEmail}`, JSON.stringify(fixedPoops));
       }
 
@@ -121,28 +142,39 @@ const App: React.FC = () => {
   const savePoops = (newPoops: Poop[]) => {
     if (!user || !user.email) return;
     try {
-      // Remove photos from storage to save space, keep them only in memory
-      const poopsForStorage = newPoops.map(poop => ({
-        ...poop,
-        photo: undefined // Don't store photos in localStorage to save space
-      }));
-      localStorage.setItem(`poops_${user.email}`, JSON.stringify(poopsForStorage));
-      console.log('Poops saved successfully:', poopsForStorage.length);
+      // Save all poop data including photos
+      localStorage.setItem(`poops_${user.email}`, JSON.stringify(newPoops));
+      console.log(`💾 Saved ${newPoops.length} poops for ${user.email}`);
     } catch (error) {
       console.error('Failed to save poops:', error);
-      // If quota exceeded, try to clean up old data
+      
       if (error instanceof DOMException && error.code === 22) {
-        alert('Storage quota exceeded. Clearing old data...');
-        // Keep only the last 50 poops
-        const recentPoops = newPoops.slice(-50).map(poop => ({
-          ...poop,
-          photo: undefined
-        }));
+        // Storage quota exceeded - inform user but don't delete data
+        alert(`⚠️ 儲存空間已滿！
+        
+🔍 目前狀況：
+• 你有 ${newPoops.length} 筆珍貴的便便記錄
+• 瀏覽器儲存空間已達上限
+
+💡 解決方案：
+1. 匯出資料備份（建議）
+2. 清理瀏覽器其他網站資料
+3. 升級到雲端儲存版本
+
+❌ 我們不會刪除你的便便記錄！`);
+        
+        // Try to save without photos as fallback
         try {
-          localStorage.setItem(`poops_${user.email}`, JSON.stringify(recentPoops));
-          setPoops(recentPoops);
+          const poopsWithoutPhotos = newPoops.map(poop => ({
+            ...poop,
+            photo: poop.photo ? '[Photo removed to save space]' : undefined
+          }));
+          localStorage.setItem(`poops_${user.email}`, JSON.stringify(poopsWithoutPhotos));
+          console.log('💾 Saved poops without photos as fallback');
+          alert('📷 照片已暫時移除以節省空間，其他資料已保存');
         } catch (e) {
-          console.error('Still failed after cleanup:', e);
+          console.error('Even fallback save failed:', e);
+          alert('❌ 無法儲存資料，請清理瀏覽器儲存空間');
         }
       }
     }
@@ -616,6 +648,45 @@ const App: React.FC = () => {
           )}
         </button>
 
+        {/* Export data button */}
+        <button
+          onClick={() => {
+            if (!user?.email) return;
+            
+            const exportData = {
+              user: user,
+              poops: poops,
+              friends: friends,
+              exportDate: new Date().toISOString(),
+              version: '1.0'
+            };
+            
+            const dataStr = JSON.stringify(exportData, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `poop-map-backup-${user.name}-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            
+            alert(`📥 便便記錄已匯出！
+            
+📊 匯出內容：
+• ${poops.length} 筆便便記錄
+• ${friends.length} 位好友
+• 完整的個人資料
+
+💾 檔案已下載到你的裝置`);
+          }}
+          className="px-4 py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 transition-colors"
+        >
+          📥 匯出資料
+        </button>
+        
         {/* Test button for debugging */}
         <button
           onClick={() => {
