@@ -11,6 +11,7 @@ import { UserSwitcher } from './components/UserSwitcher';
 import { PoopIcon, SpinnerIcon } from './components/icons';
 import { Wrapper, Status } from "@googlemaps/react-wrapper";
 // Firebase imports
+import './firebase'; // Initialize Firebase
 import { 
   savePoopToCloud, 
   getUserPoops, 
@@ -43,6 +44,7 @@ const App: React.FC = () => {
   const [allPoops, setAllPoops] = useState<Poop[]>([]); // All poops including friends'
   const [useFirebase, setUseFirebase] = useState(true); // Toggle between Firebase and localStorage
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [firebaseReady, setFirebaseReady] = useState(false);
 
   const t: TranslationStrings = translations[lang];
 
@@ -76,6 +78,30 @@ const App: React.FC = () => {
     }
   };
 
+  // Check Firebase configuration
+  useEffect(() => {
+    const checkFirebaseConfig = () => {
+      const hasApiKey = !!import.meta.env.VITE_FIREBASE_API_KEY;
+      const hasProjectId = !!import.meta.env.VITE_FIREBASE_PROJECT_ID;
+      
+      console.log('🔥 Firebase Config Check:', {
+        hasApiKey,
+        hasProjectId,
+        apiKey: import.meta.env.VITE_FIREBASE_API_KEY?.substring(0, 10) + '...',
+        projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID
+      });
+      
+      setFirebaseReady(hasApiKey && hasProjectId);
+      
+      if (!hasApiKey || !hasProjectId) {
+        console.warn('⚠️ Firebase not configured properly, using localStorage only');
+        setUseFirebase(false);
+      }
+    };
+    
+    checkFirebaseConfig();
+  }, []);
+
   // Monitor online status
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -97,10 +123,11 @@ const App: React.FC = () => {
       const userData = JSON.parse(storedUser);
       setUser(userData);
       
-      if (useFirebase && isOnline) {
+      if (useFirebase && isOnline && firebaseReady) {
         loadFirebaseData(userData.email);
       } else {
         loadPoops(userData.email);
+        loadFriends(userData.email);
       }
       
       // Check storage usage (monitoring only, no deletion)
@@ -969,19 +996,65 @@ const App: React.FC = () => {
           🧪 添加示範資料
         </button>
         
+        {/* Firebase test button */}
+        <button
+          onClick={async () => {
+            console.log('🧪 Testing Firebase connection...');
+            try {
+              if (!firebaseReady) {
+                alert('❌ Firebase 未正確配置！\n\n請檢查環境變數：\n• VITE_FIREBASE_API_KEY\n• VITE_FIREBASE_PROJECT_ID');
+                return;
+              }
+              
+              // Test Firebase connection
+              const testPoop: Poop = {
+                id: 'test-firebase-' + Date.now(),
+                lat: 25.0330,
+                lng: 121.5654,
+                timestamp: Date.now(),
+                rating: 5,
+                placeName: 'Firebase 測試',
+                privacy: 'public',
+                userId: user?.email || 'test@firebase.com',
+                notes: 'Firebase 連接測試'
+              };
+              
+              const firebaseId = await savePoopToCloud(testPoop);
+              alert(`✅ Firebase 連接成功！\n\n📊 測試結果：\n• Firebase ID: ${firebaseId}\n• 資料已上傳到雲端`);
+              
+              // Reload data to show the new poop
+              if (user?.email) {
+                loadFirebaseData(user.email);
+              }
+            } catch (error) {
+              console.error('Firebase test failed:', error);
+              alert(`❌ Firebase 連接失敗！\n\n錯誤：${error}\n\n請檢查：\n• 網路連線\n• Firebase 配置\n• Firestore 規則`);
+            }
+          }}
+          className="px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors"
+        >
+          🧪 測試 Firebase
+        </button>
+        
         {/* Firebase/localStorage toggle */}
         <button
           onClick={() => {
+            if (!firebaseReady && !useFirebase) {
+              alert('❌ Firebase 未配置，無法切換到雲端模式');
+              return;
+            }
+            
             setUseFirebase(!useFirebase);
             const newMode = !useFirebase;
             alert(`${newMode ? '☁️' : '💾'} 切換到 ${newMode ? 'Firebase 雲端' : 'localStorage 本地'} 模式！
             
 ${newMode ? '✅ 跨瀏覽器同步\n✅ 真實多用戶\n✅ 即時更新' : '✅ 離線可用\n✅ 快速存取\n✅ 隱私保護'}
 
-${isOnline ? '🌐 目前在線' : '📱 目前離線'}`);
+🔥 Firebase: ${firebaseReady ? '已配置' : '未配置'}
+🌐 網路: ${isOnline ? '在線' : '離線'}`);
             
             if (user?.email) {
-              if (newMode && isOnline) {
+              if (newMode && isOnline && firebaseReady) {
                 loadFirebaseData(user.email);
               } else {
                 loadPoops(user.email);
@@ -990,12 +1063,14 @@ ${isOnline ? '🌐 目前在線' : '📱 目前離線'}`);
             }
           }}
           className={`px-4 py-2 text-white text-sm rounded-lg transition-colors ${
-            useFirebase 
+            useFirebase && firebaseReady
               ? 'bg-blue-600 hover:bg-blue-700' 
               : 'bg-gray-600 hover:bg-gray-700'
           }`}
         >
-          {useFirebase ? '☁️ Firebase' : '💾 本地'} {!isOnline && '(離線)'}
+          {useFirebase && firebaseReady ? '☁️ Firebase' : '💾 本地'} 
+          {!isOnline && '(離線)'}
+          {!firebaseReady && '(未配置)'}
         </button>
         
         {/* Reload friends poops button */}
