@@ -785,6 +785,12 @@ const App: React.FC = () => {
   const render = (status: Status) => {
     console.log('🗺️ Google Maps loading status:', status);
     
+    // SUCCESS: Return null to show the PoopMap component
+    if (status === Status.SUCCESS) {
+      console.log('✅ Google Maps loaded successfully - showing map');
+      return null;
+    }
+    
     if (status === Status.FAILURE) {
       let errorMessage = 'Failed to load Google Maps.';
       let troubleshooting = [];
