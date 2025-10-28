@@ -20,6 +20,34 @@ export interface Poop {
   notes?: string; // 備註
   privacy: PrivacyLevel; // 隱私設定
   userId: string; // 便便所有者ID
+  // 新增互動功能
+  likes?: PoopLike[]; // 按讚列表
+  comments?: PoopComment[]; // 留言列表
+  likeCount?: number; // 按讚數量
+  commentCount?: number; // 留言數量
+}
+
+// 按讚類型
+export interface PoopLike {
+  id: string;
+  poopId: string;
+  userId: string;
+  userEmail: string;
+  userName: string;
+  userPicture?: string;
+  timestamp: number;
+}
+
+// 留言類型
+export interface PoopComment {
+  id: string;
+  poopId: string;
+  userId: string;
+  userEmail: string;
+  userName: string;
+  userPicture?: string;
+  content: string;
+  timestamp: number;
 }
 
 export interface Friend {
@@ -87,6 +115,19 @@ export interface TranslationStrings {
   rejectRequest: string;
   myQRCode: string;
   scanQRCode: string;
+  // 互動功能翻譯
+  like: string;
+  unlike: string;
+  comment: string;
+  comments: string;
+  likes: string;
+  addComment: string;
+  writeComment: string;
+  postComment: string;
+  deleteComment: string;
+  likedBy: string;
+  noComments: string;
+  noLikes: string;
 }
 
 export type Translations = {
