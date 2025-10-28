@@ -791,11 +791,22 @@ const App: React.FC = () => {
       <div className="absolute bottom-20 right-4 z-10 text-right">
         {error && <p className="bg-red-500 text-white p-2 rounded-md mb-2">{error}</p>}
         <div className="bg-white/80 backdrop-blur-sm p-3 rounded-lg shadow-lg">
-          <p className="font-bold text-gray-800">{t.totalDrops}: <span className="text-amber-800">{poops.length}</span></p>
+          <div className="flex items-center justify-between mb-2">
+            <p className="font-bold text-gray-800">{t.totalDrops}: <span className="text-amber-800">{poops.length}</span></p>
+            <div className="flex items-center space-x-1 text-xs">
+              {useFirebase && firebaseReady ? (
+                <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full">☁️</span>
+              ) : (
+                <span className="bg-gray-100 text-gray-800 px-2 py-1 rounded-full">💾</span>
+              )}
+              {!isOnline && <span className="bg-red-100 text-red-800 px-2 py-1 rounded-full">📱</span>}
+            </div>
+          </div>
           {poops.length === 0 && <p className="text-sm text-gray-600">{t.noDropsYet}</p>}
           {poops.length > 0 && (
             <div className="text-xs text-gray-500 mt-1">
               <p>最新便便: {new Date(poops[poops.length - 1]?.timestamp).toLocaleTimeString()}</p>
+              <p>可見便便: {allPoops.length} 筆 (含好友)</p>
             </div>
           )}
         </div>

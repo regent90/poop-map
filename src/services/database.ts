@@ -40,14 +40,16 @@ export const getUserPoops = async (userId: string): Promise<Poop[]> => {
   try {
     const q = query(
       collection(db, POOPS_COLLECTION),
-      where('userId', '==', userId),
-      orderBy('timestamp', 'desc')
+      where('userId', '==', userId)
     );
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({
+    const poops = querySnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     } as Poop));
+    
+    // Sort in JavaScript instead of Firestore to avoid index requirements
+    return poops.sort((a, b) => b.timestamp - a.timestamp);
   } catch (error) {
     console.error('Error getting user poops:', error);
     return [];
@@ -58,17 +60,34 @@ export const getFriendsPoops = async (friendEmails: string[]): Promise<Poop[]> =
   if (friendEmails.length === 0) return [];
   
   try {
-    const q = query(
-      collection(db, POOPS_COLLECTION),
-      where('userId', 'in', friendEmails),
-      where('privacy', 'in', ['public', 'friends']),
-      orderBy('timestamp', 'desc')
-    );
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    } as Poop));
+    // Firestore 'in' queries are limited to 10 items, so we need to batch them
+    const batchSize = 10;
+    const batches = [];
+    
+    for (let i = 0; i < friendEmails.length; i += batchSize) {
+      const batch = friendEmails.slice(i, i + batchSize);
+      const q = query(
+        collection(db, POOPS_COLLECTION),
+        where('userId', 'in', batch),
+        where('privacy', 'in', ['public', 'friends'])
+      );
+      batches.push(getDocs(q));
+    }
+    
+    const results = await Promise.all(batches);
+    const allPoops: Poop[] = [];
+    
+    results.forEach(querySnapshot => {
+      querySnapshot.docs.forEach(doc => {
+        allPoops.push({
+          id: doc.id,
+          ...doc.data()
+        } as Poop);
+      });
+    });
+    
+    // Sort by timestamp
+    return allPoops.sort((a, b) => b.timestamp - a.timestamp);
   } catch (error) {
     console.error('Error getting friends poops:', error);
     return [];
@@ -79,14 +98,16 @@ export const getPublicPoops = async (): Promise<Poop[]> => {
   try {
     const q = query(
       collection(db, POOPS_COLLECTION),
-      where('privacy', '==', 'public'),
-      orderBy('timestamp', 'desc')
+      where('privacy', '==', 'public')
     );
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({
+    const poops = querySnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     } as Poop));
+    
+    // Sort in JavaScript
+    return poops.sort((a, b) => b.timestamp - a.timestamp);
   } catch (error) {
     console.error('Error getting public poops:', error);
     return [];
