@@ -8,8 +8,9 @@ import { PoopDetailsModal } from './components/PoopDetailsModal';
 import { PoopDetailView } from './components/PoopDetailView';
 import { PoopDetailModal } from './components/PoopDetailModal';
 import { FriendsModal } from './components/FriendsModal';
-import { UserSwitcher } from './components/UserSwitcher';
+
 import { PoopIcon, SpinnerIcon } from './components/icons';
+import { IconShowcase } from './components/IconShowcase';
 import { Wrapper, Status } from "@googlemaps/react-wrapper";
 // Firebase imports
 import './firebase'; // Initialize Firebase
@@ -48,6 +49,7 @@ const App: React.FC = () => {
   const [useFirebase, setUseFirebase] = useState(true); // Toggle between Firebase and localStorage
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [firebaseReady, setFirebaseReady] = useState(false);
+  const [showIconShowcase, setShowIconShowcase] = useState(false);
 
   const t: TranslationStrings = translations[lang];
 
@@ -407,7 +409,7 @@ const App: React.FC = () => {
             address: address || undefined,
             placeName: placeName || undefined
           });
-          setShowPoopModal(true);
+          setShowDetailsModal(true);
           setIsDropping(false);
 
         } catch (error) {
@@ -804,29 +806,7 @@ const App: React.FC = () => {
     setShowPoopDetailModal(true);
   };
 
-  const handleSwitchUser = (newUser: UserProfile) => {
-    // Save current user data
-    if (user?.email) {
-      localStorage.setItem('poopMapUser', JSON.stringify(user));
-    }
 
-    // Switch to new user
-    setUser(newUser);
-    localStorage.setItem('poopMapUser', JSON.stringify(newUser));
-
-    // Load new user's data
-    loadPoops(newUser.email);
-    loadFriends(newUser.email || '');
-
-    // Reset states
-    setShowDetailsModal(false);
-    setShowDetailView(false);
-    setShowFriendsModal(false);
-    setPendingPoopData(null);
-    setSelectedPoop(null);
-
-    console.log(`Switched to user: ${newUser.name} (${newUser.email})`);
-  };
 
   // Load friends when user changes
   useEffect(() => {
@@ -1047,15 +1027,27 @@ const App: React.FC = () => {
     );
   }
 
+  // Show icon showcase if requested
+  if (showIconShowcase) {
+    return (
+      <div className="relative h-screen w-screen">
+        <div className="absolute top-4 left-4 z-10">
+          <button
+            onClick={() => setShowIconShowcase(false)}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            ← 返回地圖
+          </button>
+        </div>
+        <IconShowcase />
+      </div>
+    );
+  }
+
   // Main app for logged in users
   return (
     <div className="relative h-screen w-screen">
-      {/* User Switcher for testing */}
-      <UserSwitcher
-        currentUser={user}
-        onSwitchUser={handleSwitchUser}
-        translations={t}
-      />
+
 
       <Header
         user={user}
@@ -1067,6 +1059,7 @@ const App: React.FC = () => {
         onViewPoopDetails={handleViewPoopDetails}
         onOpenFriends={() => setShowFriendsModal(true)}
         friendsCount={friends.length}
+        onShowIconShowcase={() => setShowIconShowcase(true)}
       />
 
       {!apiKey ? (

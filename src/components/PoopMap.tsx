@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Poop } from '../types';
+import { getPoopIconType, createPoopMapIcon } from '../utils/mapIconUtils';
 
 interface MarkerProps {
   map?: any;
@@ -8,76 +9,87 @@ interface MarkerProps {
   onPoopClick?: (poop: Poop) => void;
 }
 
+// 便便圖標設計函數
+const createPoopIcon = (poop: Poop, currentUserEmail?: string) => {
+  const isOwnPoop = currentUserEmail && poop.userId === currentUserEmail;
+  const isFriendPoop = !isOwnPoop && poop.privacy === 'friends';
+  const isPublicPoop = poop.privacy === 'public' && !isOwnPoop;
+
+  // 設計三種不同的便便圖標
+  if (isOwnPoop) {
+    // 自己的便便 - 金色便便 🌟
+    return {
+      emoji: '💩',
+      background: 'linear-gradient(135deg, #FFD700, #FFA500)',
+      border: '3px solid #FF8C00',
+      shadow: '0 4px 8px rgba(255, 140, 0, 0.4)',
+      size: '44px',
+      fontSize: '26px'
+    };
+  } else if (isFriendPoop) {
+    // 好友的便便 - 藍色便便 👥
+    return {
+      emoji: '💩',
+      background: 'linear-gradient(135deg, #4A90E2, #357ABD)',
+      border: '3px solid #2E5C8A',
+      shadow: '0 4px 8px rgba(74, 144, 226, 0.4)',
+      size: '40px',
+      fontSize: '24px'
+    };
+  } else {
+    // 公開的便便 - 綠色便便 🌍
+    return {
+      emoji: '💩',
+      background: 'linear-gradient(135deg, #4CAF50, #45A049)',
+      border: '3px solid #388E3C',
+      shadow: '0 4px 8px rgba(76, 175, 80, 0.4)',
+      size: '36px',
+      fontSize: '22px'
+    };
+  }
+};
+
 const Marker: React.FC<MarkerProps> = ({ map, position, poop, onPoopClick }) => {
   const markerRef = useRef<any | null>(null);
 
   useEffect(() => {
     if (map) {
       if (!markerRef.current) {
-        // Check if AdvancedMarkerElement is available, fallback to regular Marker
+        // Get current user from localStorage to determine poop type
+        const currentUserData = localStorage.getItem('poopMapUser');
+        const currentUser = currentUserData ? JSON.parse(currentUserData) : null;
+        
+        // Determine icon type based on poop ownership and privacy
+        const iconType = getPoopIconType(poop, currentUser?.email);
+        
+        // Create icon with appropriate size based on type
+        const iconSize = iconType === 'my' ? 40 : iconType === 'friend' ? 36 : 32;
+        const poopIcon = createPoopMapIcon(iconType, iconSize);
+        
         const google = (window as any).google;
         
-        if (google?.maps?.marker?.AdvancedMarkerElement) {
-          // Create custom HTML element for the marker
-          const markerElement = document.createElement('div');
-          markerElement.innerHTML = '💩';
-          markerElement.style.fontSize = '24px';
-          markerElement.style.cursor = 'pointer';
-          markerElement.style.background = '#8B4513';
-          markerElement.style.borderRadius = '50%';
-          markerElement.style.width = '40px';
-          markerElement.style.height = '40px';
-          markerElement.style.display = 'flex';
-          markerElement.style.alignItems = 'center';
-          markerElement.style.justifyContent = 'center';
-          markerElement.style.border = '2px solid #654321';
-          markerElement.title = `Poop dropped on ${new Date(poop.timestamp).toLocaleString()}`;
-
-          // Create AdvancedMarkerElement
-          markerRef.current = new google.maps.marker.AdvancedMarkerElement({
-            position,
-            map,
-            content: markerElement,
-            title: `Poop dropped on ${new Date(poop.timestamp).toLocaleString()}`
-          });
-        } else {
-          // Fallback to regular Marker with custom icon
-          const poopSvg = `
-            <svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="20" cy="20" r="18" fill="#8B4513" stroke="#654321" stroke-width="2"/>
-              <text x="20" y="28" text-anchor="middle" font-size="20" fill="white">💩</text>
-            </svg>
-          `;
-          
-          const poopIcon = {
-            url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(poopSvg),
-            scaledSize: new google.maps.Size(40, 40),
-            anchor: new google.maps.Point(20, 20)
-          };
-
-          // Create the standard Marker
-          markerRef.current = new google.maps.Marker({
-            position,
-            map,
-            icon: poopIcon,
-            title: `Poop dropped on ${new Date(poop.timestamp).toLocaleString()}`,
-            animation: google.maps.Animation.DROP
-          });
-        }
+        // Create the marker
+        markerRef.current = new google.maps.Marker({
+          position,
+          map,
+          icon: poopIcon,
+          title: `Poop dropped on ${new Date(poop.timestamp).toLocaleString()}`,
+          animation: google.maps.Animation.DROP
+        });
         
         // Add click handler
         markerRef.current.addListener('click', () => {
-          console.log('🗺️ Poop marker clicked:', poop.id);
+          console.log('🗺️ Poop marker clicked:', poop.id, 'type:', iconType);
           if (onPoopClick) {
             onPoopClick(poop);
           }
         });
         
         // Debug log
-        console.log('Created poop marker at:', position, 'for poop:', poop.id);
+        console.log('Created poop marker at:', position, 'for poop:', poop.id, 'type:', iconType);
       } else {
         // If marker already exists, just update its position
-        markerRef.current.position = position;
+        markerRef.current.setPosition(position);
       }
     }
   }, [map, position, poop]);
@@ -87,7 +99,7 @@ const Marker: React.FC<MarkerProps> = ({ map, position, poop, onPoopClick }) => 
     const currentMarker = markerRef.current;
     return () => {
       if (currentMarker) {
-        currentMarker.map = null;
+        currentMarker.setMap(null);
       }
     };
   }, []);

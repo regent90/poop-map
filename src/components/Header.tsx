@@ -14,9 +14,10 @@ interface HeaderProps {
   onViewPoopDetails?: (poop: Poop, poopNumber: number) => void;
   onOpenFriends?: () => void;
   friendsCount?: number;
+  onShowIconShowcase?: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ user, onLogout, currentLang, onLangChange, translations, poops, onViewPoopDetails, onOpenFriends, friendsCount = 0 }) => {
+export const Header: React.FC<HeaderProps> = ({ user, onLogout, currentLang, onLangChange, translations, poops, onViewPoopDetails, onOpenFriends, friendsCount = 0, onShowIconShowcase }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -86,6 +87,16 @@ export const Header: React.FC<HeaderProps> = ({ user, onLogout, currentLang, onL
         <div className="flex items-center space-x-4">
           <LanguageSwitcher currentLang={currentLang} onLangChange={onLangChange} translations={translations} />
           
+          {/* Icon Showcase Button */}
+          <button
+            onClick={onShowIconShowcase}
+            className="p-2 rounded-full hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-white"
+            aria-label="圖標展示"
+            title="查看便便圖標設計"
+          >
+            <span className="text-2xl">🎨</span>
+          </button>
+
           {/* Friends Button */}
           <button
             onClick={onOpenFriends}
@@ -129,6 +140,31 @@ export const Header: React.FC<HeaderProps> = ({ user, onLogout, currentLang, onL
                       <div className="text-center">
                         <div className="font-medium text-gray-900">{userPoops.length}</div>
                         <div className="text-gray-500">{currentLang === 'zh-TW' ? '總計' : currentLang === 'zh-CN' ? '总计' : currentLang === 'ja' ? '合計' : currentLang === 'ko' ? '총계' : currentLang === 'es' ? 'Total' : currentLang === 'fr' ? 'Total' : currentLang === 'de' ? 'Gesamt' : 'Total'}</div>
+                      </div>
+                    </div>
+                    
+                    {/* Icon Legend */}
+                    <div className="mt-3 pt-2 border-t border-gray-100">
+                      <div className="text-xs text-gray-600 mb-2 font-medium">圖標說明</div>
+                      <div className="space-y-1 text-xs">
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 bg-amber-400 rounded-full border border-amber-500 flex items-center justify-center">
+                            <span className="text-xs">💩</span>
+                          </div>
+                          <span className="text-gray-600">我的便便</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 bg-green-400 rounded-full border border-green-500 flex items-center justify-center">
+                            <span className="text-xs">💩</span>
+                          </div>
+                          <span className="text-gray-600">好友的便便</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 bg-purple-400 rounded-full border border-purple-500 flex items-center justify-center">
+                            <span className="text-xs">💩</span>
+                          </div>
+                          <span className="text-gray-600">公開的便便</span>
+                        </div>
                       </div>
                     </div>
                   </div>
