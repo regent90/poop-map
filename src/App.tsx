@@ -11,10 +11,12 @@ import { FriendsModal } from './components/FriendsModal';
 
 import { PoopIcon, SpinnerIcon } from './components/icons';
 import { IconShowcase } from './components/IconShowcase';
+import { DatabaseDebugger } from './components/DatabaseDebugger';
 import { Wrapper, Status } from "@googlemaps/react-wrapper";
 // Firebase imports
 import './firebase'; // Initialize Firebase
-import { checkFirebaseConnection, getFirebaseConnectionStatus } from './firebase';
+import { checkFirebaseConnection } from './firebase';
+import { checkSupabaseConnection } from './supabase';
 import { 
   savePoopToCloud, 
   getUserPoops, 
@@ -26,8 +28,9 @@ import {
   getUserFriendRequests,
   updateFriendRequestStatus,
   subscribeToUserPoops,
-  subscribeToFriendRequests
-} from './services/database';
+  subscribeToFriendRequests,
+  getCurrentDatabaseProvider
+} from './services/unifiedDatabase';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -50,6 +53,7 @@ const App: React.FC = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [firebaseReady, setFirebaseReady] = useState(false);
   const [showIconShowcase, setShowIconShowcase] = useState(false);
+  const [showDebugger, setShowDebugger] = useState(false);
 
   const t: TranslationStrings = translations[lang];
 
@@ -83,40 +87,55 @@ const App: React.FC = () => {
     }
   };
 
-  // Check Firebase configuration
+  // Check database configuration
   useEffect(() => {
-    const checkFirebaseConfig = () => {
-      const hasApiKey = !!import.meta.env.VITE_FIREBASE_API_KEY;
-      const hasProjectId = !!import.meta.env.VITE_FIREBASE_PROJECT_ID;
+    const checkDatabaseConfig = async () => {
+      const hasSupabaseConfig = !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY);
+      const hasFirebaseConfig = !!(import.meta.env.VITE_FIREBASE_API_KEY && import.meta.env.VITE_FIREBASE_PROJECT_ID);
       
-      console.log('🔥 Firebase Config Check:', {
-        hasApiKey,
-        hasProjectId,
-        apiKey: import.meta.env.VITE_FIREBASE_API_KEY?.substring(0, 10) + '...',
-        projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID
+      console.log('🗄️ Database Config Check:', {
+        hasSupabaseConfig,
+        hasFirebaseConfig,
+        supabaseUrl: import.meta.env.VITE_SUPABASE_URL?.substring(0, 20) + '...',
+        firebaseProjectId: import.meta.env.VITE_FIREBASE_PROJECT_ID
       });
       
-      setFirebaseReady(hasApiKey && hasProjectId);
+      // 檢查當前使用的數據庫提供者
+      const currentProvider = await getCurrentDatabaseProvider();
+      console.log('📊 Current database provider:', currentProvider);
       
-      if (!hasApiKey || !hasProjectId) {
-        console.warn('⚠️ Firebase not configured properly, using localStorage only');
-        setUseFirebase(false);
+      setFirebaseReady(hasSupabaseConfig || hasFirebaseConfig);
+      setUseFirebase(currentProvider !== 'localStorage');
+      
+      if (!hasSupabaseConfig && !hasFirebaseConfig) {
+        console.warn('⚠️ No cloud database configured, using localStorage only');
       }
     };
     
-    checkFirebaseConfig();
+    checkDatabaseConfig();
   }, []);
 
-  // Monitor online status and Firebase connection
+  // Monitor online status and database connections
   useEffect(() => {
     const handleOnline = async () => {
       setIsOnline(true);
       console.log('🌐 Network: Online');
       
-      // Test Firebase connection when coming back online
+      // Test database connections when coming back online
       if (useFirebase) {
-        const isFirebaseConnected = await checkFirebaseConnection();
-        console.log(`🔥 Firebase: ${isFirebaseConnected ? 'Connected' : 'Blocked/Offline'}`);
+        const currentProvider = await getCurrentDatabaseProvider();
+        console.log(`📊 Current database provider: ${currentProvider}`);
+        
+        // Test connections based on available configurations
+        if (import.meta.env.VITE_SUPABASE_URL) {
+          const isSupabaseConnected = await checkSupabaseConnection();
+          console.log(`🟢 Supabase: ${isSupabaseConnected ? 'Connected' : 'Blocked/Offline'}`);
+        }
+        
+        if (import.meta.env.VITE_FIREBASE_PROJECT_ID) {
+          const isFirebaseConnected = await checkFirebaseConnection();
+          console.log(`🔥 Firebase: ${isFirebaseConnected ? 'Connected' : 'Blocked/Offline'}`);
+        }
       }
     };
     
@@ -282,44 +301,29 @@ const App: React.FC = () => {
       console.error('Failed to save to localStorage:', error);
     }
     
-    // Save to Firebase if online and connected
+    // Save to cloud database if online and connected
     if (useFirebase && isOnline) {
       try {
-        // Check Firebase connection first
-        const isConnected = await checkFirebaseConnection();
-        if (!isConnected) {
-          console.warn('🔴 Firebase connection failed, saving to localStorage only');
-          return;
-        }
-
-        // Save each new poop to Firebase
+        // Save the latest poop to cloud
         const lastPoop = newPoops[newPoops.length - 1];
-        if (lastPoop && !lastPoop.id.includes('firebase-')) {
-          const firebaseId = await savePoopToCloud(lastPoop);
-          console.log(`☁️ Saved poop to Firebase with ID: ${firebaseId}`);
+        if (lastPoop && !lastPoop.id.includes('cloud-')) {
+          const cloudId = await savePoopToCloud(lastPoop);
+          console.log(`☁️ Saved poop to cloud with ID: ${cloudId}`);
           
-          // Update the poop with Firebase ID
+          // Update the poop with cloud ID
           const updatedPoops = [...newPoops];
           updatedPoops[updatedPoops.length - 1] = {
             ...lastPoop,
-            id: `firebase-${firebaseId}`
+            id: `cloud-${cloudId}`
           };
           setPoops(updatedPoops);
           
-          // Update localStorage with Firebase ID
+          // Update localStorage with cloud ID
           localStorage.setItem(`poops_${user.email}`, JSON.stringify(updatedPoops));
         }
       } catch (error) {
-        console.error('Failed to save to Firebase:', error);
-        
-        // Check if it's a network/blocking issue
-        if (error.message?.includes('ERR_BLOCKED_BY_CLIENT') || 
-            error.message?.includes('network') ||
-            error.code === 'unavailable') {
-          console.log('🚫 Firebase blocked by ad blocker or network issue - using offline mode');
-        } else {
-          console.log('📱 Saved to localStorage only (offline mode)');
-        }
+        console.error('Failed to save to cloud database:', error);
+        console.log('📱 Saved to localStorage only (offline mode)');
       }
     }
   };
@@ -1092,11 +1096,11 @@ const App: React.FC = () => {
             <p className="font-bold text-gray-800">{t.totalDrops}: <span className="text-amber-800">{poops.length}</span></p>
             <div className="flex items-center space-x-1 text-xs">
               {useFirebase && firebaseReady ? (
-                <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full">☁️</span>
+                <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full" title="使用雲端數據庫">☁️</span>
               ) : (
-                <span className="bg-gray-100 text-gray-800 px-2 py-1 rounded-full">💾</span>
+                <span className="bg-gray-100 text-gray-800 px-2 py-1 rounded-full" title="使用本地存儲">💾</span>
               )}
-              {!isOnline && <span className="bg-red-100 text-red-800 px-2 py-1 rounded-full">📱</span>}
+              {!isOnline && <span className="bg-red-100 text-red-800 px-2 py-1 rounded-full" title="離線模式">📱</span>}
             </div>
           </div>
           {poops.length === 0 && <p className="text-sm text-gray-600">{t.noDropsYet}</p>}
@@ -1177,6 +1181,18 @@ const App: React.FC = () => {
         currentUser={user}
         translations={t}
       />
+
+      {/* Database Debugger */}
+      {showDebugger && <DatabaseDebugger />}
+
+      {/* Debug Toggle Button */}
+      <button
+        onClick={() => setShowDebugger(!showDebugger)}
+        className="fixed bottom-4 right-4 bg-gray-600 text-white p-2 rounded-full shadow-lg hover:bg-gray-700 z-40"
+        title="數據庫調試器"
+      >
+        🔍
+      </button>
     </div>
   );
 };

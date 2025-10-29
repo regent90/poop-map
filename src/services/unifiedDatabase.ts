@@ -1,0 +1,396 @@
+import { Poop, Friend, FriendRequest } from '../types';
+
+// Supabase 服務
+import {
+  savePoopToSupabase,
+  getUserPoopsFromSupabase,
+  getFriendsPoopsFromSupabase,
+  getPublicPoopsFromSupabase,
+  saveFriendToSupabase,
+  getUserFriendsFromSupabase,
+  sendFriendRequestToSupabase,
+  getUserFriendRequestsFromSupabase,
+  updateFriendRequestStatusInSupabase,
+  subscribeToUserPoopsInSupabase,
+  subscribeToFriendRequestsInSupabase
+} from './supabaseDatabase';
+
+// Firebase 服務 (作為備選)
+import {
+  savePoopToCloud as savePoopToFirebase,
+  getUserPoops as getUserPoopsFromFirebase,
+  getFriendsPoops as getFriendsPoopsFromFirebase,
+  getPublicPoops as getPublicPoopsFromFirebase,
+  saveFriendToCloud as saveFriendToFirebase,
+  getUserFriends as getUserFriendsFromFirebase,
+  sendFriendRequest as sendFriendRequestToFirebase,
+  getUserFriendRequests as getUserFriendRequestsFromFirebase,
+  updateFriendRequestStatus as updateFriendRequestStatusInFirebase,
+  subscribeToUserPoops as subscribeToUserPoopsInFirebase,
+  subscribeToFriendRequests as subscribeToFriendRequestsInFirebase
+} from './database';
+
+import { checkSupabaseConnection } from '../supabase';
+import { checkFirebaseConnection } from '../firebase';
+
+// 數據庫提供者類型
+type DatabaseProvider = 'supabase' | 'firebase' | 'localStorage';
+
+// 獲取當前數據庫提供者
+const getDatabaseProvider = async (): Promise<DatabaseProvider> => {
+  // 檢查環境變量配置
+  const hasSupabaseConfig = !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY);
+  const hasFirebaseConfig = !!(import.meta.env.VITE_FIREBASE_API_KEY && import.meta.env.VITE_FIREBASE_PROJECT_ID);
+  
+  console.log('🔍 Database provider check:', {
+    hasSupabaseConfig,
+    hasFirebaseConfig,
+    isOnline: navigator.onLine
+  });
+
+  // 如果離線，使用 localStorage
+  if (!navigator.onLine) {
+    console.log('📱 Using localStorage (offline mode)');
+    return 'localStorage';
+  }
+
+  // 優先使用 Supabase
+  if (hasSupabaseConfig) {
+    try {
+      const isSupabaseConnected = await checkSupabaseConnection();
+      if (isSupabaseConnected) {
+        console.log('✅ Using Supabase as database provider');
+        return 'supabase';
+      }
+    } catch (error) {
+      console.warn('⚠️ Supabase connection failed:', error);
+    }
+  }
+
+  // 備選使用 Firebase
+  if (hasFirebaseConfig) {
+    try {
+      const isFirebaseConnected = await checkFirebaseConnection();
+      if (isFirebaseConnected) {
+        console.log('✅ Using Firebase as database provider');
+        return 'firebase';
+      }
+    } catch (error) {
+      console.warn('⚠️ Firebase connection failed:', error);
+    }
+  }
+
+  // 最後使用 localStorage
+  console.log('📱 Using localStorage as fallback');
+  return 'localStorage';
+};
+
+// localStorage 操作函數
+const saveToLocalStorage = (key: string, data: any) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(data));
+  } catch (error) {
+    console.error('❌ Error saving to localStorage:', error);
+  }
+};
+
+const getFromLocalStorage = <T>(key: string, defaultValue: T): T => {
+  try {
+    const data = localStorage.getItem(key);
+    return data ? JSON.parse(data) : defaultValue;
+  } catch (error) {
+    console.error('❌ Error reading from localStorage:', error);
+    return defaultValue;
+  }
+};
+
+// 統一的數據庫操作接口
+
+// 便便相關操作
+export const savePoopToCloud = async (poop: Poop): Promise<string> => {
+  const provider = await getDatabaseProvider();
+  
+  try {
+    switch (provider) {
+      case 'supabase':
+        return await savePoopToSupabase(poop);
+      case 'firebase':
+        return await savePoopToFirebase(poop);
+      case 'localStorage':
+      default:
+        // 保存到 localStorage
+        const userPoops = getFromLocalStorage(`poops_${poop.userId}`, []);
+        userPoops.push(poop);
+        saveToLocalStorage(`poops_${poop.userId}`, userPoops);
+        console.log('📱 Poop saved to localStorage');
+        return poop.id;
+    }
+  } catch (error) {
+    console.error('❌ Error saving poop, falling back to localStorage:', error);
+    // 錯誤時回退到 localStorage
+    const userPoops = getFromLocalStorage(`poops_${poop.userId}`, []);
+    userPoops.push(poop);
+    saveToLocalStorage(`poops_${poop.userId}`, userPoops);
+    return poop.id;
+  }
+};
+
+export const getUserPoops = async (userEmail: string): Promise<Poop[]> => {
+  const provider = await getDatabaseProvider();
+  
+  try {
+    switch (provider) {
+      case 'supabase':
+        return await getUserPoopsFromSupabase(userEmail);
+      case 'firebase':
+        return await getUserPoopsFromFirebase(userEmail);
+      case 'localStorage':
+      default:
+        return getFromLocalStorage(`poops_${userEmail}`, []);
+    }
+  } catch (error) {
+    console.error('❌ Error getting user poops, falling back to localStorage:', error);
+    return getFromLocalStorage(`poops_${userEmail}`, []);
+  }
+};
+
+export const getFriendsPoops = async (friendEmails: string[]): Promise<Poop[]> => {
+  const provider = await getDatabaseProvider();
+  
+  try {
+    switch (provider) {
+      case 'supabase':
+        return await getFriendsPoopsFromSupabase(friendEmails);
+      case 'firebase':
+        return await getFriendsPoopsFromFirebase(friendEmails);
+      case 'localStorage':
+      default:
+        // 從 localStorage 獲取好友的便便
+        let allPoops: Poop[] = [];
+        friendEmails.forEach(email => {
+          const friendPoops = getFromLocalStorage(`poops_${email}`, []);
+          const visiblePoops = friendPoops.filter((poop: Poop) => 
+            poop.privacy === 'public' || poop.privacy === 'friends'
+          );
+          allPoops = [...allPoops, ...visiblePoops];
+        });
+        return allPoops.sort((a, b) => b.timestamp - a.timestamp);
+    }
+  } catch (error) {
+    console.error('❌ Error getting friends poops, falling back to localStorage:', error);
+    let allPoops: Poop[] = [];
+    friendEmails.forEach(email => {
+      const friendPoops = getFromLocalStorage(`poops_${email}`, []);
+      const visiblePoops = friendPoops.filter((poop: Poop) => 
+        poop.privacy === 'public' || poop.privacy === 'friends'
+      );
+      allPoops = [...allPoops, ...visiblePoops];
+    });
+    return allPoops.sort((a, b) => b.timestamp - a.timestamp);
+  }
+};
+
+export const getPublicPoops = async (): Promise<Poop[]> => {
+  const provider = await getDatabaseProvider();
+  
+  try {
+    switch (provider) {
+      case 'supabase':
+        return await getPublicPoopsFromSupabase();
+      case 'firebase':
+        return await getPublicPoopsFromFirebase();
+      case 'localStorage':
+      default:
+        // 從 localStorage 獲取所有公開便便（這在實際應用中不太實用）
+        const allKeys = Object.keys(localStorage).filter(key => key.startsWith('poops_'));
+        let publicPoops: Poop[] = [];
+        allKeys.forEach(key => {
+          const userPoops = getFromLocalStorage(key, []);
+          const userPublicPoops = userPoops.filter((poop: Poop) => poop.privacy === 'public');
+          publicPoops = [...publicPoops, ...userPublicPoops];
+        });
+        return publicPoops.sort((a, b) => b.timestamp - a.timestamp).slice(0, 100);
+    }
+  } catch (error) {
+    console.error('❌ Error getting public poops, falling back to localStorage:', error);
+    return [];
+  }
+};
+
+// 好友相關操作
+export const saveFriendToCloud = async (userEmail: string, friend: Friend): Promise<void> => {
+  const provider = await getDatabaseProvider();
+  
+  try {
+    switch (provider) {
+      case 'supabase':
+        await saveFriendToSupabase(userEmail, friend);
+        break;
+      case 'firebase':
+        await saveFriendToFirebase(userEmail, friend);
+        break;
+      case 'localStorage':
+      default:
+        const userFriends = getFromLocalStorage(`friends_${userEmail}`, []);
+        const existingIndex = userFriends.findIndex((f: Friend) => f.email === friend.email);
+        if (existingIndex >= 0) {
+          userFriends[existingIndex] = friend;
+        } else {
+          userFriends.push(friend);
+        }
+        saveToLocalStorage(`friends_${userEmail}`, userFriends);
+        console.log('📱 Friend saved to localStorage');
+    }
+  } catch (error) {
+    console.error('❌ Error saving friend, falling back to localStorage:', error);
+    const userFriends = getFromLocalStorage(`friends_${userEmail}`, []);
+    const existingIndex = userFriends.findIndex((f: Friend) => f.email === friend.email);
+    if (existingIndex >= 0) {
+      userFriends[existingIndex] = friend;
+    } else {
+      userFriends.push(friend);
+    }
+    saveToLocalStorage(`friends_${userEmail}`, userFriends);
+  }
+};
+
+export const getUserFriends = async (userEmail: string): Promise<Friend[]> => {
+  const provider = await getDatabaseProvider();
+  
+  try {
+    switch (provider) {
+      case 'supabase':
+        return await getUserFriendsFromSupabase(userEmail);
+      case 'firebase':
+        return await getUserFriendsFromFirebase(userEmail);
+      case 'localStorage':
+      default:
+        return getFromLocalStorage(`friends_${userEmail}`, []);
+    }
+  } catch (error) {
+    console.error('❌ Error getting user friends, falling back to localStorage:', error);
+    return getFromLocalStorage(`friends_${userEmail}`, []);
+  }
+};
+
+// 好友請求相關操作
+export const sendFriendRequest = async (request: FriendRequest): Promise<string> => {
+  const provider = await getDatabaseProvider();
+  
+  try {
+    switch (provider) {
+      case 'supabase':
+        return await sendFriendRequestToSupabase(request);
+      case 'firebase':
+        return await sendFriendRequestToFirebase(request);
+      case 'localStorage':
+      default:
+        // 保存到目標用戶的請求列表
+        const targetRequests = getFromLocalStorage(`friendRequests_${request.toUserEmail}`, []);
+        targetRequests.push(request);
+        saveToLocalStorage(`friendRequests_${request.toUserEmail}`, targetRequests);
+        console.log('📱 Friend request saved to localStorage');
+        return request.id;
+    }
+  } catch (error) {
+    console.error('❌ Error sending friend request, falling back to localStorage:', error);
+    const targetRequests = getFromLocalStorage(`friendRequests_${request.toUserEmail}`, []);
+    targetRequests.push(request);
+    saveToLocalStorage(`friendRequests_${request.toUserEmail}`, targetRequests);
+    return request.id;
+  }
+};
+
+export const getUserFriendRequests = async (userEmail: string): Promise<FriendRequest[]> => {
+  const provider = await getDatabaseProvider();
+  
+  try {
+    switch (provider) {
+      case 'supabase':
+        return await getUserFriendRequestsFromSupabase(userEmail);
+      case 'firebase':
+        return await getUserFriendRequestsFromFirebase(userEmail);
+      case 'localStorage':
+      default:
+        return getFromLocalStorage(`friendRequests_${userEmail}`, []);
+    }
+  } catch (error) {
+    console.error('❌ Error getting friend requests, falling back to localStorage:', error);
+    return getFromLocalStorage(`friendRequests_${userEmail}`, []);
+  }
+};
+
+export const updateFriendRequestStatus = async (requestId: string, status: 'accepted' | 'rejected'): Promise<void> => {
+  const provider = await getDatabaseProvider();
+  
+  try {
+    switch (provider) {
+      case 'supabase':
+        await updateFriendRequestStatusInSupabase(requestId, status);
+        break;
+      case 'firebase':
+        await updateFriendRequestStatusInFirebase(requestId, status);
+        break;
+      case 'localStorage':
+      default:
+        // 在 localStorage 中更新請求狀態（這需要遍歷所有用戶的請求）
+        const allKeys = Object.keys(localStorage).filter(key => key.startsWith('friendRequests_'));
+        allKeys.forEach(key => {
+          const requests = getFromLocalStorage(key, []);
+          const requestIndex = requests.findIndex((r: FriendRequest) => r.id === requestId);
+          if (requestIndex >= 0) {
+            requests[requestIndex].status = status;
+            saveToLocalStorage(key, requests);
+          }
+        });
+        console.log('📱 Friend request status updated in localStorage');
+    }
+  } catch (error) {
+    console.error('❌ Error updating friend request status, falling back to localStorage:', error);
+    // localStorage 備選邏輯已在上面實現
+  }
+};
+
+// 實時訂閱功能
+export const subscribeToUserPoops = (userEmail: string, callback: (poops: Poop[]) => void) => {
+  getDatabaseProvider().then(provider => {
+    switch (provider) {
+      case 'supabase':
+        return subscribeToUserPoopsInSupabase(userEmail, callback);
+      case 'firebase':
+        return subscribeToUserPoopsInFirebase(userEmail, callback);
+      case 'localStorage':
+      default:
+        // localStorage 不支持實時訂閱，返回空的清理函數
+        console.log('📱 localStorage does not support real-time subscriptions');
+        return () => {};
+    }
+  });
+  
+  // 返回默認的清理函數
+  return () => {};
+};
+
+export const subscribeToFriendRequests = (userEmail: string, callback: (requests: FriendRequest[]) => void) => {
+  getDatabaseProvider().then(provider => {
+    switch (provider) {
+      case 'supabase':
+        return subscribeToFriendRequestsInSupabase(userEmail, callback);
+      case 'firebase':
+        return subscribeToFriendRequestsInFirebase(userEmail, callback);
+      case 'localStorage':
+      default:
+        // localStorage 不支持實時訂閱，返回空的清理函數
+        console.log('📱 localStorage does not support real-time subscriptions');
+        return () => {};
+    }
+  });
+  
+  // 返回默認的清理函數
+  return () => {};
+};
+
+// 獲取當前使用的數據庫提供者（用於 UI 顯示）
+export const getCurrentDatabaseProvider = async (): Promise<DatabaseProvider> => {
+  return await getDatabaseProvider();
+};
