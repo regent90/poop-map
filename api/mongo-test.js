@@ -25,13 +25,8 @@ export default async function handler(req, res) {
 
     // 測試 MongoDB 連接
     const options = {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
       serverSelectionTimeoutMS: 5000,
       socketTimeoutMS: 45000,
-      ssl: true,
-      sslValidate: false,
-      tlsAllowInvalidCertificates: true,
     };
     const client = new MongoClient(mongoUri, options);
     await client.connect();

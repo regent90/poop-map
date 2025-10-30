@@ -2,13 +2,8 @@ const { MongoClient } = require('mongodb');
 
 const uri = process.env.MONGODB_URI;
 const options = {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
   serverSelectionTimeoutMS: 5000,
   socketTimeoutMS: 45000,
-  ssl: true,
-  sslValidate: false,
-  tlsAllowInvalidCertificates: true,
 };
 
 let client;
