@@ -1,4 +1,4 @@
-module.exports = async function handler(req, res) {
+export default function handler(req, res) {
   // 設置 CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -13,7 +13,7 @@ module.exports = async function handler(req, res) {
     const mongoUri = process.env.MONGODB_URI;
     const dbName = process.env.MONGODB_DB_NAME;
     
-    res.json({
+    res.status(200).json({
       success: true,
       message: 'Vercel Function is working!',
       timestamp: new Date().toISOString(),
@@ -31,4 +31,4 @@ module.exports = async function handler(req, res) {
       message: error.message
     });
   }
-};
+}
