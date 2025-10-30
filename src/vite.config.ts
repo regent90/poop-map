@@ -12,11 +12,37 @@ export default defineConfig(({ mode }) => {
       plugins: [react()],
       define: {
         'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
+        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
+        global: 'globalThis',
       },
       resolve: {
         alias: {
           '@': path.resolve(__dirname, '.'),
+        }
+      },
+      build: {
+        rollupOptions: {
+          external: [
+            'mongodb',
+            'fs',
+            'path',
+            'crypto',
+            'stream',
+            'util',
+            'url',
+            'net',
+            'tls',
+            'dns',
+            'timers',
+            'events',
+            'zlib',
+            'http',
+            'os',
+            'process',
+            'child_process',
+            'fs/promises',
+            'timers/promises'
+          ]
         }
       }
     };

@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { savePoopToMongoDB } from '../services/mongoDatabase';
-import { initMongoDB, createIndexes } from '../mongodb';
 import { Poop } from '../types';
 
 export const MongoMigrationTool: React.FC = () => {
@@ -10,19 +9,36 @@ export const MongoMigrationTool: React.FC = () => {
 
   const setupMongoDB = async () => {
     setIsLoading(true);
-    setMigrationStatus('設置 MongoDB...');
+    setMigrationStatus('檢查 MongoDB Data API 連接...');
 
     try {
-      // 初始化 MongoDB 連接
-      const connected = await initMongoDB();
-      if (!connected) {
-        throw new Error('無法連接到 MongoDB');
+      // 檢查 MongoDB Data API 配置
+      const dataApiUrl = import.meta.env.VITE_MONGODB_DATA_API_URL;
+      const apiKey = import.meta.env.VITE_MONGODB_API_KEY;
+      
+      if (!dataApiUrl || !apiKey) {
+        throw new Error('MongoDB Data API 配置不完整');
       }
 
-      // 創建索引
-      await createIndexes();
+      // 測試連接
+      const response = await fetch(`${dataApiUrl}/action/findOne`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'api-key': apiKey,
+        },
+        body: JSON.stringify({
+          collection: 'test',
+          database: import.meta.env.VITE_MONGODB_DB_NAME || 'poopmap',
+          filter: {}
+        })
+      });
+
+      if (!response.ok && response.status !== 404) {
+        throw new Error(`API 連接失敗: ${response.status}`);
+      }
       
-      setMigrationStatus('✅ MongoDB 設置完成！');
+      setMigrationStatus('✅ MongoDB Data API 連接成功！');
     } catch (error) {
       console.error('❌ MongoDB setup failed:', error);
       setMigrationStatus(`❌ MongoDB 設置失敗: ${error.message}`);
@@ -37,10 +53,12 @@ export const MongoMigrationTool: React.FC = () => {
     setMigrationResults([]);
 
     try {
-      // 初始化 MongoDB
-      const connected = await initMongoDB();
-      if (!connected) {
-        throw new Error('無法連接到 MongoDB');
+      // 檢查 MongoDB Data API 配置
+      const dataApiUrl = import.meta.env.VITE_MONGODB_DATA_API_URL;
+      const apiKey = import.meta.env.VITE_MONGODB_API_KEY;
+      
+      if (!dataApiUrl || !apiKey) {
+        throw new Error('MongoDB Data API 配置不完整');
       }
 
       // 獲取所有 localStorage 中的便便數據
