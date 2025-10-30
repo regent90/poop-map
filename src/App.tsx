@@ -14,6 +14,7 @@ import { FriendsModal } from './components/FriendsModal';
 import { PoopIcon, SpinnerIcon } from './components/icons';
 import { IconShowcase } from './components/IconShowcase';
 import { DatabaseDebugger } from './components/DatabaseDebugger';
+import { DatabaseDebugPanel } from './components/DatabaseDebugPanel';
 import { ApiUsageMonitor } from './components/ApiUsageMonitor';
 import { Wrapper, Status } from "@googlemaps/react-wrapper";
 // Firebase imports
@@ -1186,7 +1187,12 @@ const App: React.FC = () => {
       />
 
       {/* Database Debugger */}
-      {showDebugger && <DatabaseDebugger />}
+      {showDebugger && (
+        <div className="space-y-4">
+          <DatabaseDebugger />
+          <DatabaseDebugPanel />
+        </div>
+      )}
 
       {/* API Usage Monitor (開發模式) */}
       <ApiUsageMonitor />

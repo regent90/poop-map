@@ -77,7 +77,8 @@ const getDatabaseProvider = async (): Promise<DatabaseProvider> => {
   console.log('🔍 Database provider check (cached for 10min):', {
     hasSupabaseConfig,
     hasFirebaseConfig,
-    isOnline: navigator.onLine
+    isOnline: navigator.onLine,
+    timestamp: new Date().toISOString()
   });
 
   let selectedProvider: DatabaseProvider = 'localStorage';
@@ -90,54 +91,23 @@ const getDatabaseProvider = async (): Promise<DatabaseProvider> => {
   // 優先使用 MongoDB (通過後端 API)
   else {
     console.log('🔍 Trying MongoDB backend API as primary database...');
-    try {
-      // 先假設 MongoDB 可用（因為我們知道它工作正常）
-      selectedProvider = 'mongodb';
-      console.log('✅ Using MongoDB (backend API) as database provider');
-      
-      // 在背景中驗證連接
-      checkMongoBackendConnection().catch(error => {
-        console.warn('⚠️ MongoDB backend connection verification failed:', error);
-      });
-      
-    } catch (error) {
-      console.warn('⚠️ MongoDB setup failed, trying Supabase:', error);
-      
-      // 備選使用 Supabase
-      if (hasSupabaseConfig) {
-        try {
-          const isSupabaseConnected = await checkSupabaseConnection();
-          if (isSupabaseConnected) {
-            console.log('✅ Using Supabase as database provider (fallback)');
-            selectedProvider = 'supabase';
-          } else {
-            throw new Error('Supabase connection failed');
-          }
-        } catch (error) {
-          console.warn('⚠️ Supabase connection failed, trying Firebase:', error);
-          
-          // 最後備選使用 Firebase
-          if (hasFirebaseConfig) {
-            try {
-              const isFirebaseConnected = await checkFirebaseConnection();
-              if (isFirebaseConnected) {
-                console.log('✅ Using Firebase as database provider (fallback)');
-                selectedProvider = 'firebase';
-              } else {
-                selectedProvider = 'localStorage';
-              }
-            } catch (error) {
-              console.warn('⚠️ Firebase connection failed:', error);
-              selectedProvider = 'localStorage';
-            }
-          } else {
-            selectedProvider = 'localStorage';
-          }
+    
+    // 直接設置為 MongoDB，不進行連接檢查（避免阻塞）
+    selectedProvider = 'mongodb';
+    console.log('✅ Using MongoDB (backend API) as database provider - SET AS DEFAULT');
+    
+    // 在背景中驗證連接狀態（不影響選擇）
+    checkMongoBackendConnection()
+      .then(isConnected => {
+        if (isConnected) {
+          console.log('✅ MongoDB backend connection verified in background');
+        } else {
+          console.warn('⚠️ MongoDB backend connection verification failed in background');
         }
-      } else {
-        selectedProvider = 'localStorage';
-      }
-    }
+      })
+      .catch(error => {
+        console.warn('⚠️ MongoDB backend connection verification error:', error);
+      });
   }
       console.warn('⚠️ Supabase connection failed, trying Firebase:', error);
 
