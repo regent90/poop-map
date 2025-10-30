@@ -103,6 +103,25 @@ export default async function handler(req, res) {
         modifiedCount: result.modifiedCount
       });
     }
+    else if (req.method === 'DELETE') {
+      const { userId, friendEmail } = req.query;
+      
+      if (!userId || !friendEmail) {
+        return res.status(400).json({ 
+          error: 'Missing required parameters: userId and friendEmail' 
+        });
+      }
+      
+      const result = await collection.deleteOne({ 
+        userId: userId, 
+        friendEmail: friendEmail 
+      });
+      
+      res.json({ 
+        success: true, 
+        deletedCount: result.deletedCount
+      });
+    }
     else {
       res.status(405).json({ error: 'Method not allowed' });
     }

@@ -33,7 +33,8 @@ import {
   updateFriendRequestStatus,
   subscribeToUserPoops,
   subscribeToFriendRequests,
-  getCurrentDatabaseProvider
+  getCurrentDatabaseProvider,
+  removeFriend
 } from './services/unifiedDatabase';
 
 const App: React.FC = () => {
@@ -805,6 +806,41 @@ const App: React.FC = () => {
     }
   };
 
+  const handleRemoveFriend = async (friendEmail: string) => {
+    if (!user?.email) {
+      alert('請先登入！\nPlease login first!');
+      return;
+    }
+
+    try {
+      console.log(`🗑️ Removing friend: ${friendEmail}`);
+      
+      // 使用統一資料庫服務解除好友
+      await removeFriend(user.email, friendEmail);
+      
+      // 更新本地狀態
+      const updatedFriends = friends.filter(f => f.email !== friendEmail);
+      setFriends(updatedFriends);
+      
+      // 更新 localStorage 備份
+      saveFriends(updatedFriends);
+      
+      console.log(`✅ Friend ${friendEmail} removed successfully`);
+      alert(`✅ 已解除與 ${friendEmail} 的好友關係\nFriend ${friendEmail} removed successfully`);
+      
+      // 重新載入好友便便數據
+      if (updatedFriends.length > 0) {
+        loadFriendsPoops(updatedFriends.map(f => f.email));
+      } else {
+        setFriendsPoops([]);
+      }
+      
+    } catch (error) {
+      console.error('❌ Failed to remove friend:', error);
+      alert('❌ 解除好友失敗，請稍後再試\nFailed to remove friend. Please try again.');
+    }
+  };
+
   // 處理地圖上便便標記的點擊
   const handlePoopClick = (poop: Poop) => {
     console.log('🗺️ Poop clicked from map:', poop.id);
@@ -1175,6 +1211,7 @@ const App: React.FC = () => {
         onAddFriend={handleAddFriend}
         onAcceptRequest={handleAcceptRequest}
         onRejectRequest={handleRejectRequest}
+        onRemoveFriend={handleRemoveFriend}
       />
 
       {/* Poop Detail Modal */}

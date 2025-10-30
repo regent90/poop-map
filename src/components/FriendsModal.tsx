@@ -11,6 +11,7 @@ interface FriendsModalProps {
     onAddFriend: (email: string) => void;
     onAcceptRequest: (requestId: string) => void;
     onRejectRequest: (requestId: string) => void;
+    onRemoveFriend: (friendEmail: string) => void;
 }
 
 export const FriendsModal: React.FC<FriendsModalProps> = ({
@@ -22,7 +23,8 @@ export const FriendsModal: React.FC<FriendsModalProps> = ({
     translations,
     onAddFriend,
     onAcceptRequest,
-    onRejectRequest
+    onRejectRequest,
+    onRemoveFriend
 }) => {
     const [activeTab, setActiveTab] = useState<'friends' | 'requests' | 'add'>('friends');
     const [emailInput, setEmailInput] = useState('');
@@ -186,9 +188,24 @@ Ready to drop some knowledge? 💩
                                             <p className="font-medium text-gray-900">{friend.name}</p>
                                             <p className="text-sm text-gray-600">{friend.email}</p>
                                         </div>
-                                        <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded-full">
-                                            Friends
-                                        </span>
+                                        <div className="flex items-center space-x-2">
+                                            <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded-full">
+                                                Friends
+                                            </span>
+                                            <button
+                                                onClick={() => {
+                                                    if (window.confirm(`確定要解除與 ${friend.name} 的好友關係嗎？\nAre you sure you want to remove ${friend.name} as a friend?`)) {
+                                                        onRemoveFriend(friend.email);
+                                                    }
+                                                }}
+                                                className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1 rounded transition-colors"
+                                                title="解除好友 / Remove Friend"
+                                            >
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                </svg>
+                                            </button>
+                                        </div>
                                     </div>
                                 ))
                             )}

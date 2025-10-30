@@ -222,6 +222,20 @@ export const getUserFriendsFromBackend = async (userEmail: string): Promise<Frie
   }
 };
 
+// 解除好友功能 (單面解除)
+export const removeFriendFromBackend = async (userEmail: string, friendEmail: string): Promise<void> => {
+  try {
+    const result = await callAPI(`/friends?userId=${encodeURIComponent(userEmail)}&friendEmail=${encodeURIComponent(friendEmail)}`, {
+      method: 'DELETE'
+    });
+
+    console.log(`✅ Friend ${friendEmail} removed from ${userEmail}'s friend list in MongoDB backend`);
+  } catch (error) {
+    console.error('❌ Failed to remove friend from MongoDB backend:', error);
+    throw error;
+  }
+};
+
 // 好友請求相關操作
 export const sendFriendRequestToBackend = async (request: FriendRequest): Promise<string> => {
   try {

@@ -337,6 +337,49 @@ export const getUserFriends = async (userEmail: string): Promise<Friend[]> => {
   }
 };
 
+// 解除好友功能 (單面解除)
+export const removeFriend = async (userEmail: string, friendEmail: string): Promise<void> => {
+  const provider = await getDatabaseProvider();
+  
+  console.log(`🗑️ Removing friend ${friendEmail} from ${userEmail} using provider:`, provider);
+  
+  try {
+    switch (provider) {
+      case 'mongodb':
+        console.log('🍃 Removing from MongoDB...');
+        const { removeFriendFromBackend } = await import('./mongoBackendAPI');
+        await removeFriendFromBackend(userEmail, friendEmail);
+        break;
+      case 'supabase':
+        console.log('🔵 Removing from Supabase...');
+        const { removeFriendFromSupabase } = await import('./supabaseDatabase');
+        await removeFriendFromSupabase(userEmail, friendEmail);
+        break;
+      case 'firebase':
+        console.log('🟠 Removing from Firebase...');
+        // TODO: 實現 Firebase 解除好友功能
+        throw new Error('Firebase remove friend not implemented yet');
+      case 'localStorage':
+      default:
+        console.log('📱 Removing from localStorage...');
+        const userFriends = getFromLocalStorage(`friends_${userEmail}`, []);
+        const updatedFriends = userFriends.filter((f: Friend) => f.email !== friendEmail);
+        saveToLocalStorage(`friends_${userEmail}`, updatedFriends);
+        console.log('📱 Friend removed from localStorage');
+    }
+    
+    console.log(`✅ Friend ${friendEmail} successfully removed from ${userEmail}'s friend list`);
+  } catch (error) {
+    console.error('❌ Error removing friend, falling back to localStorage:', error);
+    // 錯誤時回退到 localStorage
+    const userFriends = getFromLocalStorage(`friends_${userEmail}`, []);
+    const updatedFriends = userFriends.filter((f: Friend) => f.email !== friendEmail);
+    saveToLocalStorage(`friends_${userEmail}`, updatedFriends);
+    console.log('📱 Friend removed from localStorage (fallback)');
+    throw error;
+  }
+};
+
 // 好友請求相關操作
 export const sendFriendRequest = async (request: FriendRequest): Promise<string> => {
   const provider = await getDatabaseProvider();

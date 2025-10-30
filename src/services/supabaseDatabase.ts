@@ -218,6 +218,28 @@ export const getUserFriendsFromSupabase = async (userEmail: string): Promise<Fri
   }
 };
 
+// 解除好友功能 (單面解除)
+export const removeFriendFromSupabase = async (userEmail: string, friendEmail: string): Promise<void> => {
+  try {
+    // 刪除當前用戶的好友記錄
+    const { error } = await supabase
+      .from(TABLES.FRIENDS)
+      .delete()
+      .eq('user_id', userEmail)
+      .eq('friend_email', friendEmail);
+
+    if (error) {
+      console.error('❌ Error removing friend from Supabase:', error);
+      throw error;
+    }
+
+    console.log(`✅ Friend ${friendEmail} removed from ${userEmail}'s friend list in Supabase`);
+  } catch (error) {
+    console.error('❌ Failed to remove friend from Supabase:', error);
+    throw error;
+  }
+};
+
 // 好友請求相關操作
 export const sendFriendRequestToSupabase = async (request: FriendRequest): Promise<string> => {
   try {
