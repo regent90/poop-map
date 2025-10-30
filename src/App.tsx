@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ConvexProvider, ConvexReactClient } from "convex/react";
-import { UserProfile, Poop, Language, TranslationStrings, Friend, FriendRequest } from './types';
+import { UserProfile, Poop, Language, TranslationStrings, Friend, FriendRequest, UserInventory, PoopAttack, PoopItem } from './types';
 import { initMobileViewportFix } from './utils/mobileViewport';
 import './styles/mobile-viewport.css';
 import { translations } from './constants';
@@ -11,6 +11,8 @@ import { PoopDetailsModal } from './components/PoopDetailsModal';
 import { PoopDetailView } from './components/PoopDetailView';
 import { PoopDetailModal } from './components/PoopDetailModal';
 import { FriendsModal } from './components/FriendsModal';
+import { PoopInventory } from './components/PoopInventory';
+import { PoopBombAnimation } from './components/PoopBombAnimation';
 
 import { PoopIcon, SpinnerIcon } from './components/icons';
 import { IconShowcase } from './components/IconShowcase';
@@ -38,6 +40,14 @@ import {
   removeFriend,
   savePoopToCloud
 } from './services/unifiedDatabase';
+import { 
+  getUserInventory, 
+  awardPoopItem, 
+  usePoopItem, 
+  getUnviewedAttacks, 
+  markAttackAsViewed,
+  cleanupOldAttacks
+} from './services/poopItemService';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -48,6 +58,13 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [pendingPoopData, setPendingPoopData] = useState<{ lat: number, lng: number, address?: string, placeName?: string } | null>(null);
+  
+  // 便便道具系統狀態
+  const [userInventory, setUserInventory] = useState<UserInventory | null>(null);
+  const [showInventory, setShowInventory] = useState(false);
+  const [currentAttack, setCurrentAttack] = useState<PoopAttack | null>(null);
+  const [showItemReward, setShowItemReward] = useState(false);
+  const [rewardedItem, setRewardedItem] = useState<{ item: PoopItem; message: string } | null>(null);
   const [showDetailView, setShowDetailView] = useState(false);
   const [selectedPoop, setSelectedPoop] = useState<Poop | null>(null);
   const [selectedPoopNumber, setSelectedPoopNumber] = useState(0);
@@ -545,6 +562,17 @@ const App: React.FC = () => {
     const updatedAllPoops = [...allPoops, newPoop];
     setAllPoops(updatedAllPoops);
 
+    // 獎勵便便道具
+    if (user?.email) {
+      const reward = awardPoopItem(user.email);
+      if (reward) {
+        setRewardedItem(reward);
+        setShowItemReward(true);
+        // 更新庫存
+        setUserInventory(getUserInventory(user.email));
+      }
+    }
+
     // Reset modal state
     setShowDetailsModal(false);
     setPendingPoopData(null);
@@ -929,12 +957,70 @@ const App: React.FC = () => {
     setShowPoopDetailModal(true);
   };
 
+  // 處理使用便便道具攻擊朋友
+  const handleUsePoopItem = (item: PoopItem, targetFriend: Friend, message?: string) => {
+    if (!user?.email) return;
+
+    const success = usePoopItem(
+      user.email,
+      user.name || 'Unknown',
+      user.email,
+      user.picture,
+      targetFriend.email,
+      item.id,
+      message
+    );
+
+    if (success) {
+      // 更新庫存
+      setUserInventory(getUserInventory(user.email));
+      alert(`💥 成功向 ${targetFriend.name} 丟了 ${item.name}！`);
+    } else {
+      alert('❌ 攻擊失敗，道具不存在！');
+    }
+  };
+
+  // 處理攻擊動畫完成
+  const handleAttackComplete = () => {
+    if (currentAttack && user?.email) {
+      markAttackAsViewed(user.email, currentAttack.id);
+      setCurrentAttack(null);
+      
+      // 檢查是否還有其他未查看的攻擊
+      const remainingAttacks = getUnviewedAttacks(user.email);
+      if (remainingAttacks.length > 0) {
+        setTimeout(() => {
+          setCurrentAttack(remainingAttacks[0]);
+        }, 1000);
+      }
+    }
+  };
+
+  // 處理道具獎勵顯示完成
+  const handleRewardComplete = () => {
+    setShowItemReward(false);
+    setRewardedItem(null);
+  };
+
 
 
   // Load friends when user changes
   useEffect(() => {
     if (user?.email) {
       loadFriends(user.email);
+      
+      // 載入用戶道具庫存
+      setUserInventory(getUserInventory(user.email));
+      
+      // 檢查是否有未查看的攻擊
+      const unviewedAttacks = getUnviewedAttacks(user.email);
+      if (unviewedAttacks.length > 0) {
+        // 顯示最新的攻擊
+        setCurrentAttack(unviewedAttacks[0]);
+      }
+      
+      // 清理舊的攻擊記錄
+      cleanupOldAttacks(user.email);
     }
   }, [user]);
 
@@ -1184,6 +1270,8 @@ const App: React.FC = () => {
           onOpenFriends={() => setShowFriendsModal(true)}
           friendsCount={friends.length}
           onShowIconShowcase={() => setShowIconShowcase(true)}
+          onOpenInventory={() => setShowInventory(true)}
+          inventoryItemCount={userInventory?.items.length || 0}
         />
       </div>
 
@@ -1294,6 +1382,48 @@ const App: React.FC = () => {
         onRejectRequest={handleRejectRequest}
         onRemoveFriend={handleRemoveFriend}
       />
+
+      {/* Poop Inventory Modal */}
+      {showInventory && userInventory && (
+        <PoopInventory
+          inventory={userInventory}
+          friends={friends}
+          onUseItem={handleUsePoopItem}
+          onClose={() => setShowInventory(false)}
+        />
+      )}
+
+      {/* Poop Attack Animation */}
+      {currentAttack && (
+        <PoopBombAnimation
+          attack={currentAttack}
+          onComplete={handleAttackComplete}
+        />
+      )}
+
+      {/* Item Reward Modal */}
+      {showItemReward && rewardedItem && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-sm mx-4 text-center">
+            <div className="text-6xl mb-4">{rewardedItem.item.icon}</div>
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">
+              恭喜獲得道具！🎉
+            </h2>
+            <p className="text-lg font-semibold text-purple-600 mb-2">
+              {rewardedItem.item.name}
+            </p>
+            <p className="text-sm text-gray-600 mb-4">
+              {rewardedItem.message}
+            </p>
+            <button
+              onClick={handleRewardComplete}
+              className="px-6 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600"
+            >
+              太棒了！
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Poop Detail Modal */}
       <PoopDetailModal

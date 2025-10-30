@@ -15,9 +15,11 @@ interface HeaderProps {
   onOpenFriends?: () => void;
   friendsCount?: number;
   onShowIconShowcase?: () => void;
+  onOpenInventory?: () => void;
+  inventoryItemCount?: number;
 }
 
-export const Header: React.FC<HeaderProps> = ({ user, onLogout, currentLang, onLangChange, translations, poops, onViewPoopDetails, onOpenFriends, friendsCount = 0, onShowIconShowcase }) => {
+export const Header: React.FC<HeaderProps> = ({ user, onLogout, currentLang, onLangChange, translations, poops, onViewPoopDetails, onOpenFriends, friendsCount = 0, onShowIconShowcase, onOpenInventory, inventoryItemCount = 0 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -107,6 +109,20 @@ export const Header: React.FC<HeaderProps> = ({ user, onLogout, currentLang, onL
             {friendsCount > 0 && (
               <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
                 {friendsCount}
+              </span>
+            )}
+          </button>
+
+          {/* Inventory Button */}
+          <button
+            onClick={onOpenInventory}
+            className="relative p-2 rounded-full hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-white"
+            aria-label="便便道具庫存"
+          >
+            <span className="text-2xl">🎒</span>
+            {inventoryItemCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-purple-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                {inventoryItemCount}
               </span>
             )}
           </button>

@@ -133,3 +133,43 @@ export interface TranslationStrings {
 export type Translations = {
   [key in Language]: TranslationStrings;
 };
+
+// 便便道具系統
+export interface PoopItem {
+  id: string;
+  type: 'poop_bomb' | 'golden_poop' | 'rainbow_poop' | 'stinky_poop';
+  name: string;
+  description: string;
+  icon: string; // emoji 或圖片 URL
+  rarity: 'common' | 'rare' | 'epic' | 'legendary';
+  obtainedAt: number;
+}
+
+export interface UserInventory {
+  userId: string;
+  items: PoopItem[];
+  totalPoops: number; // 總便便數量
+  lastUpdated: number;
+}
+
+export interface PoopAttack {
+  id: string;
+  fromUserId: string;
+  fromUserName: string;
+  fromUserEmail: string;
+  fromUserPicture?: string;
+  toUserId: string;
+  toUserEmail: string;
+  itemUsed: PoopItem;
+  timestamp: number;
+  viewed: boolean; // 是否已查看
+  message?: string; // 攻擊訊息
+}
+
+export interface PoopBombEffect {
+  id: string;
+  type: 'poop_rain' | 'poop_explosion' | 'poop_tornado' | 'golden_shower';
+  duration: number; // 動畫持續時間 (毫秒)
+  intensity: 'light' | 'medium' | 'heavy' | 'extreme';
+  particles: number; // 粒子數量
+}
