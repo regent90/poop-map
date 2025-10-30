@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { savePoopToMongoDB } from '../services/mongoDatabase';
+import { checkMongoBackendConnection } from '../services/mongoBackendAPI';
 import { Poop } from '../types';
 
 export const MongoMigrationTool: React.FC = () => {
@@ -9,36 +10,24 @@ export const MongoMigrationTool: React.FC = () => {
 
   const setupMongoDB = async () => {
     setIsLoading(true);
-    setMigrationStatus('檢查 MongoDB Data API 連接...');
+    setMigrationStatus('檢查 MongoDB 後端 API 連接...');
 
     try {
-      // 檢查 MongoDB Data API 配置
-      const dataApiUrl = import.meta.env.VITE_MONGODB_DATA_API_URL;
-      const apiKey = import.meta.env.VITE_MONGODB_API_KEY;
+      // 檢查 MongoDB 後端 API 配置
+      const mongoUri = import.meta.env.VITE_MONGODB_URI;
       
-      if (!dataApiUrl || !apiKey) {
-        throw new Error('MongoDB Data API 配置不完整');
+      if (!mongoUri) {
+        throw new Error('MongoDB URI 配置不完整');
       }
 
-      // 測試連接
-      const response = await fetch(`${dataApiUrl}/action/findOne`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'api-key': apiKey,
-        },
-        body: JSON.stringify({
-          collection: 'test',
-          database: import.meta.env.VITE_MONGODB_DB_NAME || 'poopmap',
-          filter: {}
-        })
-      });
-
-      if (!response.ok && response.status !== 404) {
-        throw new Error(`API 連接失敗: ${response.status}`);
+      // 測試後端 API 連接
+      const isConnected = await checkMongoBackendConnection();
+      
+      if (!isConnected) {
+        throw new Error('無法連接到 MongoDB 後端 API');
       }
       
-      setMigrationStatus('✅ MongoDB Data API 連接成功！');
+      setMigrationStatus('✅ MongoDB 後端 API 連接成功！');
     } catch (error) {
       console.error('❌ MongoDB setup failed:', error);
       setMigrationStatus(`❌ MongoDB 設置失敗: ${error.message}`);
@@ -53,12 +42,18 @@ export const MongoMigrationTool: React.FC = () => {
     setMigrationResults([]);
 
     try {
-      // 檢查 MongoDB Data API 配置
-      const dataApiUrl = import.meta.env.VITE_MONGODB_DATA_API_URL;
-      const apiKey = import.meta.env.VITE_MONGODB_API_KEY;
+      // 檢查 MongoDB 後端 API 配置
+      const mongoUri = import.meta.env.VITE_MONGODB_URI;
       
-      if (!dataApiUrl || !apiKey) {
-        throw new Error('MongoDB Data API 配置不完整');
+      if (!mongoUri) {
+        throw new Error('MongoDB URI 配置不完整');
+      }
+
+      // 測試後端 API 連接
+      const isConnected = await checkMongoBackendConnection();
+      
+      if (!isConnected) {
+        throw new Error('無法連接到 MongoDB 後端 API');
       }
 
       // 獲取所有 localStorage 中的便便數據
@@ -139,7 +134,7 @@ export const MongoMigrationTool: React.FC = () => {
       <div className="space-y-4">
         <div className="bg-green-50 p-3 rounded">
           <p className="text-sm text-green-700">
-            這個工具會將數據遷移到 MongoDB Atlas，並設置 MongoDB 作為主要數據庫。
+            這個工具會將數據遷移到 MongoDB Atlas（通過後端 API），並設置 MongoDB 作為主要數據庫。
           </p>
         </div>
 
@@ -210,14 +205,14 @@ export const MongoMigrationTool: React.FC = () => {
 
         <div className="bg-yellow-50 p-3 rounded">
           <p className="text-xs text-yellow-700">
-            ⚠️ 請確保已在 MongoDB Atlas 中創建數據庫並配置連接字符串
+            ⚠️ 請確保已在 Vercel 中配置 MONGODB_URI 和 MONGODB_DB_NAME 環境變數
           </p>
         </div>
 
         <div className="bg-blue-50 p-3 rounded">
           <p className="text-xs text-blue-700 font-medium mb-1">數據庫優先級:</p>
           <p className="text-xs text-blue-600">
-            1. MongoDB Atlas (主要)<br/>
+            1. MongoDB Atlas (後端 API) - 主要<br/>
             2. Supabase (備選)<br/>
             3. Firebase (備選)<br/>
             4. localStorage (離線)
