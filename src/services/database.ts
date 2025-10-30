@@ -15,6 +15,52 @@ import {
 import { db } from '../firebase';
 import { Poop, Friend, FriendRequest, PoopLike, PoopComment } from '../types';
 
+// 緩存機制 - 避免過度查詢
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+  expiry: number;
+}
+
+const cache = new Map<string, CacheEntry<any>>();
+const DEFAULT_CACHE_DURATION = 5 * 60 * 1000; // 5 分鐘緩存
+
+const getCachedData = <T>(key: string): T | null => {
+  const entry = cache.get(key);
+  if (entry && Date.now() < entry.expiry) {
+    console.log(`🔄 Using cached data for: ${key}`);
+    return entry.data;
+  }
+  if (entry) {
+    cache.delete(key); // 清除過期緩存
+  }
+  return null;
+};
+
+const setCachedData = <T>(key: string, data: T, duration: number = DEFAULT_CACHE_DURATION): void => {
+  cache.set(key, {
+    data,
+    timestamp: Date.now(),
+    expiry: Date.now() + duration
+  });
+  console.log(`💾 Cached data for: ${key} (${duration / 1000}s)`);
+};
+
+// 清除特定緩存
+const clearCache = (pattern?: string): void => {
+  if (pattern) {
+    for (const key of cache.keys()) {
+      if (key.includes(pattern)) {
+        cache.delete(key);
+      }
+    }
+    console.log(`🗑️ Cleared cache matching: ${pattern}`);
+  } else {
+    cache.clear();
+    console.log('🗑️ Cleared all cache');
+  }
+};
+
 // Collections
 const POOPS_COLLECTION = 'poops';
 const FRIENDS_COLLECTION = 'friends';
@@ -26,6 +72,8 @@ const COMMENTS_COLLECTION = 'comments';
 // Poop operations
 export const savePoopToCloud = async (poop: Poop): Promise<string> => {
   try {
+    console.log('🔥 Saving poop to Firebase');
+    
     // Filter out undefined fields to prevent Firebase errors
     const cleanPoop = Object.fromEntries(
       Object.entries(poop).filter(([_, value]) => value !== undefined)
@@ -36,6 +84,15 @@ export const savePoopToCloud = async (poop: Poop): Promise<string> => {
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now()
     });
+    
+    // 清除相關緩存
+    clearCache(`user_poops_${poop.userId}`);
+    if (poop.privacy === 'public') {
+      clearCache('public_poops');
+    }
+    clearCache('friends_poops'); // 清除所有好友便便緩存
+    
+    console.log('✅ Poop saved to Firebase:', docRef.id);
     return docRef.id;
   } catch (error) {
     console.error('Error saving poop to cloud:', error);
@@ -44,7 +101,16 @@ export const savePoopToCloud = async (poop: Poop): Promise<string> => {
 };
 
 export const getUserPoops = async (userId: string): Promise<Poop[]> => {
+  const cacheKey = `user_poops_${userId}`;
+  
+  // 檢查緩存
+  const cachedPoops = getCachedData<Poop[]>(cacheKey);
+  if (cachedPoops) {
+    return cachedPoops;
+  }
+  
   try {
+    console.log(`🔥 Fetching user poops from Firebase for: ${userId}`);
     const q = query(
       collection(db, POOPS_COLLECTION),
       where('userId', '==', userId)
@@ -56,7 +122,13 @@ export const getUserPoops = async (userId: string): Promise<Poop[]> => {
     } as Poop));
     
     // Sort in JavaScript instead of Firestore to avoid index requirements
-    return poops.sort((a, b) => b.timestamp - a.timestamp);
+    const sortedPoops = poops.sort((a, b) => b.timestamp - a.timestamp);
+    
+    // 緩存結果（3分鐘）
+    setCachedData(cacheKey, sortedPoops, 3 * 60 * 1000);
+    
+    console.log(`✅ Fetched ${sortedPoops.length} poops for user ${userId}`);
+    return sortedPoops;
   } catch (error) {
     console.error('Error getting user poops:', error);
     return [];
@@ -66,7 +138,17 @@ export const getUserPoops = async (userId: string): Promise<Poop[]> => {
 export const getFriendsPoops = async (friendEmails: string[]): Promise<Poop[]> => {
   if (friendEmails.length === 0) return [];
   
+  const cacheKey = `friends_poops_${friendEmails.sort().join(',').substring(0, 50)}`;
+  
+  // 檢查緩存
+  const cachedPoops = getCachedData<Poop[]>(cacheKey);
+  if (cachedPoops) {
+    return cachedPoops;
+  }
+  
   try {
+    console.log(`🔥 Fetching friends poops from Firebase for ${friendEmails.length} friends`);
+    
     // Firestore 'in' queries are limited to 10 items, so we need to batch them
     const batchSize = 10;
     const batches = [];
@@ -94,7 +176,13 @@ export const getFriendsPoops = async (friendEmails: string[]): Promise<Poop[]> =
     });
     
     // Sort by timestamp
-    return allPoops.sort((a, b) => b.timestamp - a.timestamp);
+    const sortedPoops = allPoops.sort((a, b) => b.timestamp - a.timestamp);
+    
+    // 緩存結果（5分鐘）
+    setCachedData(cacheKey, sortedPoops, 5 * 60 * 1000);
+    
+    console.log(`✅ Fetched ${sortedPoops.length} friends poops`);
+    return sortedPoops;
   } catch (error) {
     console.error('Error getting friends poops:', error);
     return [];
@@ -102,7 +190,16 @@ export const getFriendsPoops = async (friendEmails: string[]): Promise<Poop[]> =
 };
 
 export const getPublicPoops = async (): Promise<Poop[]> => {
+  const cacheKey = 'public_poops';
+  
+  // 檢查緩存
+  const cachedPoops = getCachedData<Poop[]>(cacheKey);
+  if (cachedPoops) {
+    return cachedPoops;
+  }
+  
   try {
+    console.log('🔥 Fetching public poops from Firebase');
     const q = query(
       collection(db, POOPS_COLLECTION),
       where('privacy', '==', 'public')
@@ -114,7 +211,13 @@ export const getPublicPoops = async (): Promise<Poop[]> => {
     } as Poop));
     
     // Sort in JavaScript
-    return poops.sort((a, b) => b.timestamp - a.timestamp);
+    const sortedPoops = poops.sort((a, b) => b.timestamp - a.timestamp);
+    
+    // 緩存結果（10分鐘，因為公開便便變化較少）
+    setCachedData(cacheKey, sortedPoops, 10 * 60 * 1000);
+    
+    console.log(`✅ Fetched ${sortedPoops.length} public poops`);
+    return sortedPoops;
   } catch (error) {
     console.error('Error getting public poops:', error);
     return [];
@@ -239,21 +342,48 @@ export const updateFriendRequestStatus = async (requestId: string, status: 'acce
 };
 
 // Real-time listeners
+// 防抖機制避免過度觸發
+const debounceCallbacks = new Map<string, NodeJS.Timeout>();
+
+const debounceCallback = (key: string, callback: () => void, delay: number = 1000) => {
+  const existingTimeout = debounceCallbacks.get(key);
+  if (existingTimeout) {
+    clearTimeout(existingTimeout);
+  }
+  
+  const timeout = setTimeout(() => {
+    callback();
+    debounceCallbacks.delete(key);
+  }, delay);
+  
+  debounceCallbacks.set(key, timeout);
+};
+
 export const subscribeToUserPoops = (userId: string, callback: (poops: Poop[]) => void) => {
+  console.log('🔄 Setting up Firebase subscription for user poops:', userId);
+  
   const q = query(
     collection(db, POOPS_COLLECTION),
     where('userId', '==', userId)
   );
   
   return onSnapshot(q, (querySnapshot) => {
-    const poops = querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    } as Poop));
-    
-    // Sort in JavaScript instead of Firestore to avoid index requirements
-    const sortedPoops = poops.sort((a, b) => b.timestamp - a.timestamp);
-    callback(sortedPoops);
+    // 使用防抖避免過度觸發
+    debounceCallback(`user_poops_${userId}`, () => {
+      const poops = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as Poop));
+      
+      // Sort in JavaScript instead of Firestore to avoid index requirements
+      const sortedPoops = poops.sort((a, b) => b.timestamp - a.timestamp);
+      
+      // 更新緩存
+      setCachedData(`user_poops_${userId}`, sortedPoops, 3 * 60 * 1000);
+      
+      console.log(`🔄 Firebase: Updated ${sortedPoops.length} user poops for ${userId}`);
+      callback(sortedPoops);
+    }, 1000); // 1秒防抖
   });
 };
 

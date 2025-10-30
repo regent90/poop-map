@@ -90,24 +90,56 @@ const getDatabaseProvider = async (): Promise<DatabaseProvider> => {
     console.log('📱 Using localStorage (offline mode)');
     selectedProvider = 'localStorage';
   }
-  // 強制使用 MongoDB 作為主要數據庫
-  else {
-    console.log('🔍 Setting MongoDB as primary database (forced)');
-    selectedProvider = 'mongodb';
-    console.log('✅ MongoDB set as database provider - FORCED DEFAULT');
-    
-    // 在背景中驗證連接狀態（僅用於日誌）
-    checkMongoBackendConnection()
-      .then(isConnected => {
-        if (isConnected) {
-          console.log('✅ MongoDB backend connection verified in background');
-        } else {
-          console.warn('⚠️ MongoDB backend connection verification failed in background (but still using MongoDB)');
+  // 優先使用 Firebase 作為主要雲端數據庫
+  else if (hasFirebaseConfig) {
+    try {
+      const isFirebaseConnected = await checkFirebaseConnection();
+      if (isFirebaseConnected) {
+        console.log('✅ Using Firebase as database provider');
+        selectedProvider = 'firebase';
+      } else {
+        throw new Error('Firebase connection failed');
+      }
+    } catch (error) {
+      console.warn('⚠️ Firebase connection failed, trying Supabase:', error);
+      
+      // 備選使用 Supabase
+      if (hasSupabaseConfig) {
+        try {
+          const isSupabaseConnected = await checkSupabaseConnection();
+          if (isSupabaseConnected) {
+            console.log('✅ Using Supabase as database provider (fallback)');
+            selectedProvider = 'supabase';
+          } else {
+            selectedProvider = 'localStorage';
+          }
+        } catch (error) {
+          console.warn('⚠️ Supabase connection failed:', error);
+          selectedProvider = 'localStorage';
         }
-      })
-      .catch(error => {
-        console.warn('⚠️ MongoDB backend connection verification error (but still using MongoDB):', error);
-      });
+      } else {
+        selectedProvider = 'localStorage';
+      }
+    }
+  }
+  // 如果只有 Supabase，使用 Supabase
+  else if (hasSupabaseConfig) {
+    try {
+      const isSupabaseConnected = await checkSupabaseConnection();
+      if (isSupabaseConnected) {
+        console.log('✅ Using Supabase as database provider');
+        selectedProvider = 'supabase';
+      } else {
+        selectedProvider = 'localStorage';
+      }
+    } catch (error) {
+      console.warn('⚠️ Supabase connection failed:', error);
+      selectedProvider = 'localStorage';
+    }
+  }
+  // 最後使用 localStorage
+  else {
+    selectedProvider = 'localStorage';
   }
 
   // 緩存結果
