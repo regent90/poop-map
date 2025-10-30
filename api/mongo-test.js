@@ -29,6 +29,9 @@ export default async function handler(req, res) {
       useUnifiedTopology: true,
       serverSelectionTimeoutMS: 5000,
       socketTimeoutMS: 45000,
+      ssl: true,
+      sslValidate: false,
+      tlsAllowInvalidCertificates: true,
     };
     const client = new MongoClient(mongoUri, options);
     await client.connect();
