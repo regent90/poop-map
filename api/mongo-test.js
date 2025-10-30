@@ -31,6 +31,9 @@ export default async function handler(req, res) {
       socketTimeoutMS: 45000,
       maxPoolSize: 10,
       minPoolSize: 5,
+      ssl: true,
+      tls: true,
+      tlsInsecure: false,
     };
     
     const client = new MongoClient(mongoUri, options);

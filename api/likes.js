@@ -6,6 +6,9 @@ const options = {
   socketTimeoutMS: 45000,
   maxPoolSize: 10,
   minPoolSize: 5,
+  ssl: true,
+  tls: true,
+  tlsInsecure: false,
 };
 
 let client;
