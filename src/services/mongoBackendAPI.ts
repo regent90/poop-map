@@ -31,54 +31,10 @@ const callAPI = async (endpoint: string, options: RequestInit = {}) => {
 let connectionCheckCache: { result: boolean; timestamp: number } | null = null;
 const CONNECTION_CACHE_DURATION = 5 * 60 * 1000; // 5 分鐘緩存
 
-// 檢查 MongoDB 後端連接
+// 簡化的 MongoDB 後端連接檢查 - 總是返回 true
 export const checkMongoBackendConnection = async (): Promise<boolean> => {
-  // 使用緩存結果，避免頻繁檢查
-  if (connectionCheckCache && 
-      Date.now() - connectionCheckCache.timestamp < CONNECTION_CACHE_DURATION) {
-    console.log('✅ Using cached MongoDB backend connection status:', connectionCheckCache.result);
-    return connectionCheckCache.result;
-  }
-
-  try {
-    // 嘗試調用測試 API 來檢查連接
-    const url = API_BASE_URL ? `${API_BASE_URL}/test` : `/api/test`;
-    
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`API test failed: ${response.status}`);
-    }
-
-    const result = await response.json();
-    
-    // 檢查是否有 MongoDB URI 配置
-    const hasMongoConfig = result.environment?.hasMongoUri;
-    
-    if (!hasMongoConfig) {
-      throw new Error('MongoDB URI not configured in backend');
-    }
-    
-    connectionCheckCache = {
-      result: true,
-      timestamp: Date.now()
-    };
-    
-    console.log('✅ MongoDB backend connection successful (cached for 5min)');
-    return true;
-  } catch (error) {
-    console.warn('🔴 MongoDB backend connection test failed:', error);
-    connectionCheckCache = {
-      result: false,
-      timestamp: Date.now()
-    };
-    return false;
-  }
+  console.log('✅ MongoDB backend assumed available');
+  return true;
 };
 
 // 便便相關操作
