@@ -61,6 +61,11 @@ export const savePoopToBackend = async (poop: Poop): Promise<string> => {
     
     // 觸發即時更新
     triggerImmediateUpdate(`user_poops_${poop.userId}`);
+    
+    // 如果是公開便便，也觸發公開便便的更新
+    if (poop.privacy === 'public') {
+      triggerImmediateUpdate('public_poops');
+    }
 
     console.log('✅ Poop saved to MongoDB backend:', result.insertedId);
     return result.insertedId;
@@ -189,9 +194,9 @@ const clearExpiredCache = () => {
 // 每分鐘清理一次過期緩存
 setInterval(clearExpiredCache, 60000);
 
-export const getPublicPoopsFromBackend = async (): Promise<Poop[]> => {
-  // 使用緩存，減少 API 調用
-  if (publicPoopsCache && 
+export const getPublicPoopsFromBackend = async (useCache: boolean = false): Promise<Poop[]> => {
+  // 即時模式下不使用緩存，除非明確要求
+  if (useCache && publicPoopsCache && 
       Date.now() - publicPoopsCache.timestamp < PUBLIC_POOPS_CACHE_DURATION) {
     console.log(`✅ Using cached public poops (${publicPoopsCache.data.length} items)`);
     return publicPoopsCache.data;
@@ -215,18 +220,84 @@ export const getPublicPoopsFromBackend = async (): Promise<Poop[]> => {
       address: doc.address
     })) as Poop[];
 
-    // 緩存結果
+    // 更新緩存
     publicPoopsCache = {
       data: poops,
       timestamp: Date.now()
     };
 
-    console.log(`✅ Fetched ${poops.length} public poops from MongoDB backend (cached for 5min)`);
+    console.log(`⚡ Fetched ${poops.length} public poops from MongoDB backend (REAL-TIME)`);
     return poops;
   } catch (error) {
     console.error('❌ Failed to fetch public poops from MongoDB backend:', error);
     throw error;
   }
+};
+
+// 公開便便即時訂閱
+export const subscribeToPublicPoopsInBackend = (callback: (poops: Poop[]) => void) => {
+  console.log(`⚡ Setting up REAL-TIME subscription for public poops`);
+  
+  const subscriptionKey = `public_poops`;
+  
+  // 如果已有訂閱，先清除
+  if (activeSubscriptions.has(subscriptionKey)) {
+    const existing = activeSubscriptions.get(subscriptionKey);
+    if (existing) {
+      clearInterval(existing.interval);
+    }
+  }
+  
+  const REAL_TIME_INTERVAL = 3000; // 3 秒輪詢公開便便
+  
+  const pollForChanges = async () => {
+    try {
+      const poops = await getPublicPoopsFromBackend(false); // 不使用緩存
+      const subscription = activeSubscriptions.get(subscriptionKey);
+      
+      if (subscription) {
+        const dataChanged = JSON.stringify(poops) !== JSON.stringify(subscription.lastData);
+        
+        if (dataChanged) {
+          console.log(`⚡ REAL-TIME: Public poops changed, updating immediately!`);
+          subscription.lastData = poops;
+          callback(poops);
+        }
+        
+        // 固定 3 秒間隔
+        subscription.interval = setTimeout(pollForChanges, REAL_TIME_INTERVAL);
+      }
+    } catch (error) {
+      console.error('❌ Error in MongoDB backend real-time public poops polling:', error);
+      // 即使錯誤也保持即時輪詢
+      const subscription = activeSubscriptions.get(subscriptionKey);
+      if (subscription) {
+        subscription.interval = setTimeout(pollForChanges, REAL_TIME_INTERVAL);
+      }
+    }
+  };
+
+  // 立即執行第一次查詢
+  getPublicPoopsFromBackend(false).then(initialPoops => {
+    const interval = setTimeout(pollForChanges, REAL_TIME_INTERVAL);
+    activeSubscriptions.set(subscriptionKey, {
+      interval,
+      lastData: initialPoops,
+      callback
+    });
+    callback(initialPoops);
+  }).catch(error => {
+    console.error('❌ Error in initial MongoDB backend public poops query:', error);
+  });
+
+  return () => {
+    console.log(`⚡ Stopping REAL-TIME polling for public poops`);
+    const subscription = activeSubscriptions.get(subscriptionKey);
+    if (subscription) {
+      clearTimeout(subscription.interval);
+      activeSubscriptions.delete(subscriptionKey);
+    }
+  };
 };
 
 // 好友相關操作
@@ -311,16 +382,47 @@ export const removeFriendFromBackend = async (userEmail: string, friendEmail: st
   }
 };
 
-// 手動觸發即時更新
+// 手動觸發即時更新 - 立即執行
 export const triggerImmediateUpdate = (subscriptionKey: string) => {
   const subscription = activeSubscriptions.get(subscriptionKey);
   if (subscription) {
-    console.log(`⚡ Triggering immediate update for: ${subscriptionKey}`);
+    console.log(`⚡ Triggering INSTANT update for: ${subscriptionKey}`);
     clearTimeout(subscription.interval);
-    // 立即執行回調，然後重新開始輪詢
+    
+    // 立即執行更新，不等待
+    if (subscriptionKey.includes('user_poops_')) {
+      const userEmail = subscriptionKey.replace('user_poops_', '');
+      getUserPoopsFromBackend(userEmail, false).then(poops => {
+        subscription.lastData = poops;
+        subscription.callback(poops);
+      });
+    } else if (subscriptionKey.includes('friend_requests_')) {
+      const userEmail = subscriptionKey.replace('friend_requests_', '');
+      getUserFriendRequestsFromBackend(userEmail).then(requests => {
+        subscription.lastData = requests;
+        subscription.callback(requests);
+      });
+    } else if (subscriptionKey.includes('poop_interactions_')) {
+      const poopId = subscriptionKey.replace('poop_interactions_', '');
+      Promise.all([
+        getLikesFromBackend(poopId),
+        getCommentsFromBackend(poopId)
+      ]).then(([likes, comments]) => {
+        const data = { likes, comments };
+        subscription.lastData = data;
+        subscription.callback(data);
+      });
+    } else if (subscriptionKey === 'public_poops') {
+      getPublicPoopsFromBackend(false).then(poops => {
+        subscription.lastData = poops;
+        subscription.callback(poops);
+      });
+    }
+    
+    // 重新開始正常輪詢
     subscription.interval = setTimeout(() => {
-      // 這裡會觸發 pollForChanges 邏輯
-    }, 100);
+      // 輪詢邏輯會在各自的函數中處理
+    }, 50);
   }
 };
 
@@ -411,25 +513,11 @@ export const getActiveSubscriptionsCount = () => {
   return activeSubscriptions.size;
 };
 
-// 頁面可見性變化時的優化
-let isPageVisible = true;
-if (typeof document !== 'undefined') {
-  document.addEventListener('visibilitychange', () => {
-    isPageVisible = !document.hidden;
-    console.log(`📱 Page visibility changed: ${isPageVisible ? 'visible' : 'hidden'}`);
-    
-    // 當頁面不可見時，減慢輪詢頻率
-    if (!isPageVisible) {
-      activeSubscriptions.forEach((subscription, key) => {
-        // 暫停當前輪詢，稍後以較慢頻率重啟
-        clearTimeout(subscription.interval);
-      });
-    }
-  });
-}
+// 移除頁面可見性限制 - 保持 24/7 即時同步
+console.log('⚡ MongoDB Real-Time Sync: NO LIMITS MODE - 24/7 instant updates enabled!');
 
 export const subscribeToUserPoopsInBackend = (userEmail: string, callback: (poops: Poop[]) => void) => {
-  console.log(`🔄 Setting up smart polling subscription for user poops: ${userEmail}`);
+  console.log(`⚡ Setting up REAL-TIME subscription for user poops: ${userEmail}`);
   
   const subscriptionKey = `user_poops_${userEmail}`;
   
@@ -441,51 +529,42 @@ export const subscribeToUserPoopsInBackend = (userEmail: string, callback: (poop
     }
   }
   
-  let pollInterval = 5000; // 開始時 5 秒輪詢
-  let consecutiveNoChanges = 0;
+  const REAL_TIME_INTERVAL = 1000; // 1 秒即時輪詢！
   
   const pollForChanges = async () => {
     try {
-      const poops = await getUserPoopsFromBackend(userEmail);
+      const poops = await getUserPoopsFromBackend(userEmail, false); // 不使用緩存，確保即時性
       const subscription = activeSubscriptions.get(subscriptionKey);
       
       if (subscription) {
         const dataChanged = JSON.stringify(poops) !== JSON.stringify(subscription.lastData);
         
         if (dataChanged) {
-          console.log(`🔄 Data changed for user ${userEmail}, updating...`);
+          console.log(`⚡ REAL-TIME: Data changed for user ${userEmail}, updating immediately!`);
           subscription.lastData = poops;
           
           // 清除相關緩存
           userPoopsCache.delete(userEmail);
           
           callback(poops);
-          consecutiveNoChanges = 0;
-          pollInterval = 5000; // 重置為快速輪詢
-        } else {
-          consecutiveNoChanges++;
-          // 逐漸增加輪詢間隔，最多到 30 秒
-          if (consecutiveNoChanges > 3) {
-            pollInterval = Math.min(30000, pollInterval * 1.5);
-          }
         }
         
-        // 重新設置下次輪詢
-        subscription.interval = setTimeout(pollForChanges, pollInterval);
+        // 固定 1 秒間隔，真正的即時體驗
+        subscription.interval = setTimeout(pollForChanges, REAL_TIME_INTERVAL);
       }
     } catch (error) {
-      console.error('❌ Error in MongoDB backend smart polling:', error);
-      // 錯誤時延長輪詢間隔
+      console.error('❌ Error in MongoDB backend real-time polling:', error);
+      // 即使錯誤也保持即時輪詢
       const subscription = activeSubscriptions.get(subscriptionKey);
       if (subscription) {
-        subscription.interval = setTimeout(pollForChanges, 15000);
+        subscription.interval = setTimeout(pollForChanges, REAL_TIME_INTERVAL);
       }
     }
   };
 
   // 立即執行第一次查詢
-  getUserPoopsFromBackend(userEmail).then(initialPoops => {
-    const interval = setTimeout(pollForChanges, pollInterval);
+  getUserPoopsFromBackend(userEmail, false).then(initialPoops => {
+    const interval = setTimeout(pollForChanges, REAL_TIME_INTERVAL);
     activeSubscriptions.set(subscriptionKey, {
       interval,
       lastData: initialPoops,
@@ -497,7 +576,7 @@ export const subscribeToUserPoopsInBackend = (userEmail: string, callback: (poop
   });
 
   return () => {
-    console.log(`🔄 Stopping smart polling for user poops: ${userEmail}`);
+    console.log(`⚡ Stopping REAL-TIME polling for user poops: ${userEmail}`);
     const subscription = activeSubscriptions.get(subscriptionKey);
     if (subscription) {
       clearTimeout(subscription.interval);
@@ -507,7 +586,7 @@ export const subscribeToUserPoopsInBackend = (userEmail: string, callback: (poop
 };
 
 export const subscribeToFriendRequestsInBackend = (userEmail: string, callback: (requests: FriendRequest[]) => void) => {
-  console.log(`🔄 Setting up smart polling subscription for friend requests: ${userEmail}`);
+  console.log(`⚡ Setting up REAL-TIME subscription for friend requests: ${userEmail}`);
   
   const subscriptionKey = `friend_requests_${userEmail}`;
   
@@ -519,8 +598,7 @@ export const subscribeToFriendRequestsInBackend = (userEmail: string, callback: 
     }
   }
   
-  let pollInterval = 10000; // 開始時 10 秒輪詢
-  let consecutiveNoChanges = 0;
+  const REAL_TIME_INTERVAL = 2000; // 2 秒即時輪詢好友請求
   
   const pollForChanges = async () => {
     try {
@@ -531,35 +609,27 @@ export const subscribeToFriendRequestsInBackend = (userEmail: string, callback: 
         const dataChanged = JSON.stringify(requests) !== JSON.stringify(subscription.lastData);
         
         if (dataChanged) {
-          console.log(`🔄 Friend requests changed for user ${userEmail}, updating...`);
+          console.log(`⚡ REAL-TIME: Friend requests changed for user ${userEmail}, updating immediately!`);
           subscription.lastData = requests;
           callback(requests);
-          consecutiveNoChanges = 0;
-          pollInterval = 10000; // 重置為快速輪詢
-        } else {
-          consecutiveNoChanges++;
-          // 逐漸增加輪詢間隔，最多到 60 秒
-          if (consecutiveNoChanges > 2) {
-            pollInterval = Math.min(60000, pollInterval * 1.5);
-          }
         }
         
-        // 重新設置下次輪詢
-        subscription.interval = setTimeout(pollForChanges, pollInterval);
+        // 固定 2 秒間隔
+        subscription.interval = setTimeout(pollForChanges, REAL_TIME_INTERVAL);
       }
     } catch (error) {
-      console.error('❌ Error in MongoDB backend friend requests smart polling:', error);
-      // 錯誤時延長輪詢間隔
+      console.error('❌ Error in MongoDB backend real-time friend requests polling:', error);
+      // 即使錯誤也保持即時輪詢
       const subscription = activeSubscriptions.get(subscriptionKey);
       if (subscription) {
-        subscription.interval = setTimeout(pollForChanges, 30000);
+        subscription.interval = setTimeout(pollForChanges, REAL_TIME_INTERVAL);
       }
     }
   };
 
   // 立即執行第一次查詢
   getUserFriendRequestsFromBackend(userEmail).then(initialRequests => {
-    const interval = setTimeout(pollForChanges, pollInterval);
+    const interval = setTimeout(pollForChanges, REAL_TIME_INTERVAL);
     activeSubscriptions.set(subscriptionKey, {
       interval,
       lastData: initialRequests,
@@ -571,7 +641,7 @@ export const subscribeToFriendRequestsInBackend = (userEmail: string, callback: 
   });
 
   return () => {
-    console.log(`🔄 Stopping smart polling for friend requests: ${userEmail}`);
+    console.log(`⚡ Stopping REAL-TIME polling for friend requests: ${userEmail}`);
     const subscription = activeSubscriptions.get(subscriptionKey);
     if (subscription) {
       clearTimeout(subscription.interval);
@@ -687,9 +757,9 @@ export const removeLikeFromBackend = async (poopId: string, userId: string): Pro
   }
 };
 
-// 智能輪詢便便互動數據 - 模擬即時更新
+// 超高頻即時輪詢便便互動數據 - 真正的即時體驗
 export const subscribeToPoopInteractionsInBackend = (poopId: string, callback: (data: { likes: any[], comments: any[] }) => void) => {
-  console.log(`🔄 Setting up smart polling subscription for poop interactions: ${poopId}`);
+  console.log(`⚡ Setting up ULTRA REAL-TIME subscription for poop interactions: ${poopId}`);
   
   const subscriptionKey = `poop_interactions_${poopId}`;
   
@@ -701,8 +771,7 @@ export const subscribeToPoopInteractionsInBackend = (poopId: string, callback: (
     }
   }
   
-  let pollInterval = 3000; // 開始時 3 秒輪詢（互動更頻繁）
-  let consecutiveNoChanges = 0;
+  const ULTRA_REAL_TIME_INTERVAL = 500; // 0.5 秒超高頻輪詢！互動需要最即時的反饋
   
   const pollForChanges = async () => {
     try {
@@ -718,28 +787,20 @@ export const subscribeToPoopInteractionsInBackend = (poopId: string, callback: (
         const dataChanged = JSON.stringify(interactionData) !== JSON.stringify(subscription.lastData);
         
         if (dataChanged) {
-          console.log(`🔄 Interactions changed for poop ${poopId}, updating...`);
+          console.log(`⚡ ULTRA REAL-TIME: Interactions changed for poop ${poopId}, updating INSTANTLY!`);
           subscription.lastData = interactionData;
           callback(interactionData);
-          consecutiveNoChanges = 0;
-          pollInterval = 3000; // 重置為快速輪詢
-        } else {
-          consecutiveNoChanges++;
-          // 逐漸增加輪詢間隔，最多到 20 秒
-          if (consecutiveNoChanges > 5) {
-            pollInterval = Math.min(20000, pollInterval * 1.3);
-          }
         }
         
-        // 重新設置下次輪詢
-        subscription.interval = setTimeout(pollForChanges, pollInterval);
+        // 固定 0.5 秒間隔，超即時體驗
+        subscription.interval = setTimeout(pollForChanges, ULTRA_REAL_TIME_INTERVAL);
       }
     } catch (error) {
-      console.error('❌ Error in MongoDB backend interactions smart polling:', error);
-      // 錯誤時延長輪詢間隔
+      console.error('❌ Error in MongoDB backend ultra real-time interactions polling:', error);
+      // 即使錯誤也保持超高頻輪詢
       const subscription = activeSubscriptions.get(subscriptionKey);
       if (subscription) {
-        subscription.interval = setTimeout(pollForChanges, 10000);
+        subscription.interval = setTimeout(pollForChanges, ULTRA_REAL_TIME_INTERVAL);
       }
     }
   };
@@ -750,7 +811,7 @@ export const subscribeToPoopInteractionsInBackend = (poopId: string, callback: (
     getCommentsFromBackend(poopId)
   ]).then(([likes, comments]) => {
     const initialData = { likes, comments };
-    const interval = setTimeout(pollForChanges, pollInterval);
+    const interval = setTimeout(pollForChanges, ULTRA_REAL_TIME_INTERVAL);
     activeSubscriptions.set(subscriptionKey, {
       interval,
       lastData: initialData,
@@ -762,7 +823,7 @@ export const subscribeToPoopInteractionsInBackend = (poopId: string, callback: (
   });
 
   return () => {
-    console.log(`🔄 Stopping smart polling for poop interactions: ${poopId}`);
+    console.log(`⚡ Stopping ULTRA REAL-TIME polling for poop interactions: ${poopId}`);
     const subscription = activeSubscriptions.get(subscriptionKey);
     if (subscription) {
       clearTimeout(subscription.interval);

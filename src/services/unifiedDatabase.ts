@@ -272,6 +272,34 @@ export const getPublicPoops = async (): Promise<Poop[]> => {
   }
 };
 
+// 公開便便即時訂閱
+export const subscribeToPublicPoops = (callback: (poops: Poop[]) => void) => {
+  getDatabaseProvider().then(provider => {
+    switch (provider) {
+      case 'mongodb':
+        console.log('⚡ Setting up MongoDB real-time subscription for public poops');
+        import('./mongoBackendAPI').then(({ subscribeToPublicPoopsInBackend }) => {
+          return subscribeToPublicPoopsInBackend(callback);
+        });
+        break;
+      case 'supabase':
+        // Supabase 已有即時訂閱
+        console.log('⚡ Supabase real-time subscription for public poops');
+        break;
+      case 'firebase':
+        // Firebase 已有即時訂閱
+        console.log('⚡ Firebase real-time subscription for public poops');
+        break;
+      case 'localStorage':
+      default:
+        console.log('📱 localStorage does not support real-time subscriptions for public poops');
+        return () => {};
+    }
+  });
+  
+  return () => {};
+};
+
 // 好友相關操作
 export const saveFriendToCloud = async (userEmail: string, friend: Friend): Promise<void> => {
   const provider = await getDatabaseProvider();
