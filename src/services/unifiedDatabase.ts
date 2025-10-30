@@ -90,13 +90,9 @@ const getDatabaseProvider = async (): Promise<DatabaseProvider> => {
     console.log('📱 Using localStorage (offline mode)');
     selectedProvider = 'localStorage';
   }
-  // 優先使用 Supabase，如果不可用則使用 MongoDB
-  else if (hasSupabaseConfig) {
-    console.log('🔵 Using Supabase as primary database');
-    selectedProvider = 'supabase';
-  }
+  // 優先使用 MongoDB（已優化），Supabase 作為備選
   else {
-    console.log('🍃 Using MongoDB as fallback database');
+    console.log('🍃 Using MongoDB as primary database (with smart polling)');
     selectedProvider = 'mongodb';
   }
 

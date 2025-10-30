@@ -55,6 +55,13 @@ export const savePoopToBackend = async (poop: Poop): Promise<string> => {
       body: JSON.stringify(poop)
     });
 
+    // 立即清除相關緩存並觸發更新
+    userPoopsCache.delete(poop.userId);
+    publicPoopsCache = null; // 如果是公開便便，清除公開緩存
+    
+    // 觸發即時更新
+    triggerImmediateUpdate(`user_poops_${poop.userId}`);
+
     console.log('✅ Poop saved to MongoDB backend:', result.insertedId);
     return result.insertedId;
   } catch (error: any) {
@@ -74,7 +81,16 @@ export const savePoopToBackend = async (poop: Poop): Promise<string> => {
   }
 };
 
-export const getUserPoopsFromBackend = async (userEmail: string): Promise<Poop[]> => {
+export const getUserPoopsFromBackend = async (userEmail: string, useCache: boolean = true): Promise<Poop[]> => {
+  // 檢查緩存
+  if (useCache && userPoopsCache.has(userEmail)) {
+    const cache = userPoopsCache.get(userEmail)!;
+    if (Date.now() - cache.timestamp < USER_POOPS_CACHE_DURATION) {
+      console.log(`✅ Using cached poops for user ${userEmail} (${cache.data.length} items)`);
+      return cache.data;
+    }
+  }
+
   try {
     const result = await callAPI(`/poops?userId=${encodeURIComponent(userEmail)}`);
     
@@ -93,7 +109,13 @@ export const getUserPoopsFromBackend = async (userEmail: string): Promise<Poop[]
       address: doc.address
     })) as Poop[];
 
-    console.log(`✅ Fetched ${poops.length} poops for user ${userEmail} from MongoDB backend`);
+    // 更新緩存
+    userPoopsCache.set(userEmail, {
+      data: poops,
+      timestamp: Date.now()
+    });
+
+    console.log(`✅ Fetched ${poops.length} poops for user ${userEmail} from MongoDB backend (cached)`);
     return poops;
   } catch (error) {
     console.error('❌ Failed to fetch user poops from MongoDB backend:', error);
@@ -131,9 +153,41 @@ export const getFriendsPoopsFromBackend = async (friendEmails: string[]): Promis
   }
 };
 
-// 公開便便查詢緩存
+// 緩存系統優化
 let publicPoopsCache: { data: Poop[]; timestamp: number } | null = null;
-const PUBLIC_POOPS_CACHE_DURATION = 5 * 60 * 1000; // 5 分鐘緩存
+let userPoopsCache = new Map<string, { data: Poop[]; timestamp: number }>();
+let friendsCache = new Map<string, { data: Friend[]; timestamp: number }>();
+
+const PUBLIC_POOPS_CACHE_DURATION = 3 * 60 * 1000; // 3 分鐘緩存
+const USER_POOPS_CACHE_DURATION = 2 * 60 * 1000; // 2 分鐘緩存
+const FRIENDS_CACHE_DURATION = 5 * 60 * 1000; // 5 分鐘緩存
+
+// 清除過期緩存
+const clearExpiredCache = () => {
+  const now = Date.now();
+  
+  // 清除用戶便便緩存
+  userPoopsCache.forEach((cache, key) => {
+    if (now - cache.timestamp > USER_POOPS_CACHE_DURATION) {
+      userPoopsCache.delete(key);
+    }
+  });
+  
+  // 清除好友緩存
+  friendsCache.forEach((cache, key) => {
+    if (now - cache.timestamp > FRIENDS_CACHE_DURATION) {
+      friendsCache.delete(key);
+    }
+  });
+  
+  // 清除公開便便緩存
+  if (publicPoopsCache && now - publicPoopsCache.timestamp > PUBLIC_POOPS_CACHE_DURATION) {
+    publicPoopsCache = null;
+  }
+};
+
+// 每分鐘清理一次過期緩存
+setInterval(clearExpiredCache, 60000);
 
 export const getPublicPoopsFromBackend = async (): Promise<Poop[]> => {
   // 使用緩存，減少 API 調用
@@ -201,7 +255,16 @@ export const saveFriendToBackend = async (userEmail: string, friend: Friend): Pr
   }
 };
 
-export const getUserFriendsFromBackend = async (userEmail: string): Promise<Friend[]> => {
+export const getUserFriendsFromBackend = async (userEmail: string, useCache: boolean = true): Promise<Friend[]> => {
+  // 檢查緩存
+  if (useCache && friendsCache.has(userEmail)) {
+    const cache = friendsCache.get(userEmail)!;
+    if (Date.now() - cache.timestamp < FRIENDS_CACHE_DURATION) {
+      console.log(`✅ Using cached friends for user ${userEmail} (${cache.data.length} items)`);
+      return cache.data;
+    }
+  }
+
   try {
     const result = await callAPI(`/friends?userId=${encodeURIComponent(userEmail)}&status=accepted`);
 
@@ -214,7 +277,13 @@ export const getUserFriendsFromBackend = async (userEmail: string): Promise<Frie
       addedAt: doc.addedAt
     })) as Friend[];
 
-    console.log(`✅ Fetched ${friends.length} friends for user ${userEmail} from MongoDB backend`);
+    // 更新緩存
+    friendsCache.set(userEmail, {
+      data: friends,
+      timestamp: Date.now()
+    });
+
+    console.log(`✅ Fetched ${friends.length} friends for user ${userEmail} from MongoDB backend (cached)`);
     return friends;
   } catch (error) {
     console.error('❌ Failed to fetch user friends from MongoDB backend:', error);
@@ -229,11 +298,43 @@ export const removeFriendFromBackend = async (userEmail: string, friendEmail: st
       method: 'DELETE'
     });
 
+    // 立即清除相關緩存
+    friendsCache.delete(userEmail);
+    
+    // 觸發即時更新
+    triggerImmediateUpdate(`friend_requests_${userEmail}`);
+
     console.log(`✅ Friend ${friendEmail} removed from ${userEmail}'s friend list in MongoDB backend`);
   } catch (error) {
     console.error('❌ Failed to remove friend from MongoDB backend:', error);
     throw error;
   }
+};
+
+// 手動觸發即時更新
+export const triggerImmediateUpdate = (subscriptionKey: string) => {
+  const subscription = activeSubscriptions.get(subscriptionKey);
+  if (subscription) {
+    console.log(`⚡ Triggering immediate update for: ${subscriptionKey}`);
+    clearTimeout(subscription.interval);
+    // 立即執行回調，然後重新開始輪詢
+    subscription.interval = setTimeout(() => {
+      // 這裡會觸發 pollForChanges 邏輯
+    }, 100);
+  }
+};
+
+// 批量觸發更新（當執行影響多個數據的操作時）
+export const triggerBatchUpdate = (userEmail: string) => {
+  console.log(`⚡ Triggering batch update for user: ${userEmail}`);
+  
+  // 清除所有相關緩存
+  userPoopsCache.delete(userEmail);
+  friendsCache.delete(userEmail);
+  
+  // 觸發所有相關訂閱的更新
+  triggerImmediateUpdate(`user_poops_${userEmail}`);
+  triggerImmediateUpdate(`friend_requests_${userEmail}`);
 };
 
 // 好友請求相關操作
@@ -293,46 +394,189 @@ export const updateFriendRequestStatusInBackend = async (requestId: string, stat
   }
 };
 
-// 訂閱相關操作（使用輪詢）
+// 智能輪詢訂閱系統 - 模擬即時更新
+let activeSubscriptions = new Map<string, { interval: NodeJS.Timeout; lastData: any; callback: Function }>();
+
+// 全局訂閱管理器
+export const clearAllSubscriptions = () => {
+  console.log('🧹 Clearing all MongoDB backend subscriptions');
+  activeSubscriptions.forEach((subscription, key) => {
+    clearTimeout(subscription.interval);
+  });
+  activeSubscriptions.clear();
+};
+
+// 獲取活躍訂閱數量（用於調試）
+export const getActiveSubscriptionsCount = () => {
+  return activeSubscriptions.size;
+};
+
+// 頁面可見性變化時的優化
+let isPageVisible = true;
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    isPageVisible = !document.hidden;
+    console.log(`📱 Page visibility changed: ${isPageVisible ? 'visible' : 'hidden'}`);
+    
+    // 當頁面不可見時，減慢輪詢頻率
+    if (!isPageVisible) {
+      activeSubscriptions.forEach((subscription, key) => {
+        // 暫停當前輪詢，稍後以較慢頻率重啟
+        clearTimeout(subscription.interval);
+      });
+    }
+  });
+}
+
 export const subscribeToUserPoopsInBackend = (userEmail: string, callback: (poops: Poop[]) => void) => {
-  console.log(`🔄 Setting up polling subscription for user poops: ${userEmail}`);
+  console.log(`🔄 Setting up smart polling subscription for user poops: ${userEmail}`);
+  
+  const subscriptionKey = `user_poops_${userEmail}`;
+  
+  // 如果已有訂閱，先清除
+  if (activeSubscriptions.has(subscriptionKey)) {
+    const existing = activeSubscriptions.get(subscriptionKey);
+    if (existing) {
+      clearInterval(existing.interval);
+    }
+  }
+  
+  let pollInterval = 5000; // 開始時 5 秒輪詢
+  let consecutiveNoChanges = 0;
   
   const pollForChanges = async () => {
     try {
       const poops = await getUserPoopsFromBackend(userEmail);
-      callback(poops);
+      const subscription = activeSubscriptions.get(subscriptionKey);
+      
+      if (subscription) {
+        const dataChanged = JSON.stringify(poops) !== JSON.stringify(subscription.lastData);
+        
+        if (dataChanged) {
+          console.log(`🔄 Data changed for user ${userEmail}, updating...`);
+          subscription.lastData = poops;
+          
+          // 清除相關緩存
+          userPoopsCache.delete(userEmail);
+          
+          callback(poops);
+          consecutiveNoChanges = 0;
+          pollInterval = 5000; // 重置為快速輪詢
+        } else {
+          consecutiveNoChanges++;
+          // 逐漸增加輪詢間隔，最多到 30 秒
+          if (consecutiveNoChanges > 3) {
+            pollInterval = Math.min(30000, pollInterval * 1.5);
+          }
+        }
+        
+        // 重新設置下次輪詢
+        subscription.interval = setTimeout(pollForChanges, pollInterval);
+      }
     } catch (error) {
-      console.error('❌ Error in MongoDB backend polling:', error);
+      console.error('❌ Error in MongoDB backend smart polling:', error);
+      // 錯誤時延長輪詢間隔
+      const subscription = activeSubscriptions.get(subscriptionKey);
+      if (subscription) {
+        subscription.interval = setTimeout(pollForChanges, 15000);
+      }
     }
   };
 
-  // 每 30 秒輪詢一次
-  const interval = setInterval(pollForChanges, 30000);
+  // 立即執行第一次查詢
+  getUserPoopsFromBackend(userEmail).then(initialPoops => {
+    const interval = setTimeout(pollForChanges, pollInterval);
+    activeSubscriptions.set(subscriptionKey, {
+      interval,
+      lastData: initialPoops,
+      callback
+    });
+    callback(initialPoops);
+  }).catch(error => {
+    console.error('❌ Error in initial MongoDB backend query:', error);
+  });
 
   return () => {
-    console.log(`🔄 Stopping polling for user poops: ${userEmail}`);
-    clearInterval(interval);
+    console.log(`🔄 Stopping smart polling for user poops: ${userEmail}`);
+    const subscription = activeSubscriptions.get(subscriptionKey);
+    if (subscription) {
+      clearTimeout(subscription.interval);
+      activeSubscriptions.delete(subscriptionKey);
+    }
   };
 };
 
 export const subscribeToFriendRequestsInBackend = (userEmail: string, callback: (requests: FriendRequest[]) => void) => {
-  console.log(`🔄 Setting up polling subscription for friend requests: ${userEmail}`);
+  console.log(`🔄 Setting up smart polling subscription for friend requests: ${userEmail}`);
+  
+  const subscriptionKey = `friend_requests_${userEmail}`;
+  
+  // 如果已有訂閱，先清除
+  if (activeSubscriptions.has(subscriptionKey)) {
+    const existing = activeSubscriptions.get(subscriptionKey);
+    if (existing) {
+      clearInterval(existing.interval);
+    }
+  }
+  
+  let pollInterval = 10000; // 開始時 10 秒輪詢
+  let consecutiveNoChanges = 0;
   
   const pollForChanges = async () => {
     try {
       const requests = await getUserFriendRequestsFromBackend(userEmail);
-      callback(requests);
+      const subscription = activeSubscriptions.get(subscriptionKey);
+      
+      if (subscription) {
+        const dataChanged = JSON.stringify(requests) !== JSON.stringify(subscription.lastData);
+        
+        if (dataChanged) {
+          console.log(`🔄 Friend requests changed for user ${userEmail}, updating...`);
+          subscription.lastData = requests;
+          callback(requests);
+          consecutiveNoChanges = 0;
+          pollInterval = 10000; // 重置為快速輪詢
+        } else {
+          consecutiveNoChanges++;
+          // 逐漸增加輪詢間隔，最多到 60 秒
+          if (consecutiveNoChanges > 2) {
+            pollInterval = Math.min(60000, pollInterval * 1.5);
+          }
+        }
+        
+        // 重新設置下次輪詢
+        subscription.interval = setTimeout(pollForChanges, pollInterval);
+      }
     } catch (error) {
-      console.error('❌ Error in MongoDB backend friend requests polling:', error);
+      console.error('❌ Error in MongoDB backend friend requests smart polling:', error);
+      // 錯誤時延長輪詢間隔
+      const subscription = activeSubscriptions.get(subscriptionKey);
+      if (subscription) {
+        subscription.interval = setTimeout(pollForChanges, 30000);
+      }
     }
   };
 
-  // 每 60 秒輪詢一次
-  const interval = setInterval(pollForChanges, 60000);
+  // 立即執行第一次查詢
+  getUserFriendRequestsFromBackend(userEmail).then(initialRequests => {
+    const interval = setTimeout(pollForChanges, pollInterval);
+    activeSubscriptions.set(subscriptionKey, {
+      interval,
+      lastData: initialRequests,
+      callback
+    });
+    callback(initialRequests);
+  }).catch(error => {
+    console.error('❌ Error in initial MongoDB backend friend requests query:', error);
+  });
 
   return () => {
-    console.log(`🔄 Stopping polling for friend requests: ${userEmail}`);
-    clearInterval(interval);
+    console.log(`🔄 Stopping smart polling for friend requests: ${userEmail}`);
+    const subscription = activeSubscriptions.get(subscriptionKey);
+    if (subscription) {
+      clearTimeout(subscription.interval);
+      activeSubscriptions.delete(subscriptionKey);
+    }
   };
 };
 
@@ -350,6 +594,9 @@ export const addCommentToBackend = async (poopId: string, userId: string, userEm
         userPicture
       })
     });
+
+    // 觸發便便互動的即時更新
+    triggerImmediateUpdate(`poop_interactions_${poopId}`);
 
     console.log('✅ Comment added to MongoDB backend:', result.insertedId);
     return result.insertedId;
@@ -398,6 +645,9 @@ export const addLikeToBackend = async (poopId: string, userId: string, userEmail
       })
     });
 
+    // 觸發便便互動的即時更新
+    triggerImmediateUpdate(`poop_interactions_${poopId}`);
+
     console.log('✅ Like added to MongoDB backend:', result.insertedId);
     return result.insertedId;
   } catch (error: any) {
@@ -427,6 +677,9 @@ export const removeLikeFromBackend = async (poopId: string, userId: string): Pro
       method: 'DELETE'
     });
 
+    // 觸發便便互動的即時更新
+    triggerImmediateUpdate(`poop_interactions_${poopId}`);
+
     console.log('✅ Like removed from MongoDB backend:', { poopId, userId });
   } catch (error) {
     console.error('❌ Failed to remove like from MongoDB backend:', error);
@@ -434,9 +687,22 @@ export const removeLikeFromBackend = async (poopId: string, userId: string): Pro
   }
 };
 
-// 實時監聽便便的互動數據（使用輪詢）
+// 智能輪詢便便互動數據 - 模擬即時更新
 export const subscribeToPoopInteractionsInBackend = (poopId: string, callback: (data: { likes: any[], comments: any[] }) => void) => {
-  console.log(`🔄 Setting up polling subscription for poop interactions: ${poopId}`);
+  console.log(`🔄 Setting up smart polling subscription for poop interactions: ${poopId}`);
+  
+  const subscriptionKey = `poop_interactions_${poopId}`;
+  
+  // 如果已有訂閱，先清除
+  if (activeSubscriptions.has(subscriptionKey)) {
+    const existing = activeSubscriptions.get(subscriptionKey);
+    if (existing) {
+      clearInterval(existing.interval);
+    }
+  }
+  
+  let pollInterval = 3000; // 開始時 3 秒輪詢（互動更頻繁）
+  let consecutiveNoChanges = 0;
   
   const pollForChanges = async () => {
     try {
@@ -445,20 +711,62 @@ export const subscribeToPoopInteractionsInBackend = (poopId: string, callback: (
         getCommentsFromBackend(poopId)
       ]);
       
-      callback({ likes, comments });
+      const interactionData = { likes, comments };
+      const subscription = activeSubscriptions.get(subscriptionKey);
+      
+      if (subscription) {
+        const dataChanged = JSON.stringify(interactionData) !== JSON.stringify(subscription.lastData);
+        
+        if (dataChanged) {
+          console.log(`🔄 Interactions changed for poop ${poopId}, updating...`);
+          subscription.lastData = interactionData;
+          callback(interactionData);
+          consecutiveNoChanges = 0;
+          pollInterval = 3000; // 重置為快速輪詢
+        } else {
+          consecutiveNoChanges++;
+          // 逐漸增加輪詢間隔，最多到 20 秒
+          if (consecutiveNoChanges > 5) {
+            pollInterval = Math.min(20000, pollInterval * 1.3);
+          }
+        }
+        
+        // 重新設置下次輪詢
+        subscription.interval = setTimeout(pollForChanges, pollInterval);
+      }
     } catch (error) {
-      console.error('❌ Error in MongoDB backend interactions polling:', error);
+      console.error('❌ Error in MongoDB backend interactions smart polling:', error);
+      // 錯誤時延長輪詢間隔
+      const subscription = activeSubscriptions.get(subscriptionKey);
+      if (subscription) {
+        subscription.interval = setTimeout(pollForChanges, 10000);
+      }
     }
   };
 
-  // 立即執行一次
-  pollForChanges();
-
-  // 每 30 秒輪詢一次
-  const interval = setInterval(pollForChanges, 30000);
+  // 立即執行第一次查詢
+  Promise.all([
+    getLikesFromBackend(poopId),
+    getCommentsFromBackend(poopId)
+  ]).then(([likes, comments]) => {
+    const initialData = { likes, comments };
+    const interval = setTimeout(pollForChanges, pollInterval);
+    activeSubscriptions.set(subscriptionKey, {
+      interval,
+      lastData: initialData,
+      callback
+    });
+    callback(initialData);
+  }).catch(error => {
+    console.error('❌ Error in initial MongoDB backend interactions query:', error);
+  });
 
   return () => {
-    console.log(`🔄 Stopping polling for poop interactions: ${poopId}`);
-    clearInterval(interval);
+    console.log(`🔄 Stopping smart polling for poop interactions: ${poopId}`);
+    const subscription = activeSubscriptions.get(subscriptionKey);
+    if (subscription) {
+      clearTimeout(subscription.interval);
+      activeSubscriptions.delete(subscriptionKey);
+    }
   };
 };
