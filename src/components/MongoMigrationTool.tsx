@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { savePoopToMongoDB } from '../services/mongoDatabase';
 import { checkMongoBackendConnection } from '../services/mongoBackendAPI';
+import { clearDatabaseProviderCache } from '../services/unifiedDatabase';
 import { Poop } from '../types';
 
 export const MongoMigrationTool: React.FC = () => {
@@ -20,7 +21,10 @@ export const MongoMigrationTool: React.FC = () => {
         throw new Error('無法連接到 MongoDB 後端 API');
       }
       
-      setMigrationStatus('✅ MongoDB 後端 API 連接成功！');
+      // 清除緩存，強制重新檢查數據庫提供者
+      clearDatabaseProviderCache();
+      
+      setMigrationStatus('✅ MongoDB 後端 API 連接成功！已設為主要數據庫');
     } catch (error) {
       console.error('❌ MongoDB setup failed:', error);
       setMigrationStatus(`❌ MongoDB 設置失敗: ${error.message}`);

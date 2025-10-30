@@ -56,6 +56,12 @@ type DatabaseProvider = 'mongodb' | 'supabase' | 'firebase' | 'localStorage';
 let databaseProviderCache: { provider: DatabaseProvider; timestamp: number } | null = null;
 const PROVIDER_CACHE_DURATION = 10 * 60 * 1000; // 10 分鐘緩存
 
+// 清除數據庫提供者緩存（強制重新檢查）
+export const clearDatabaseProviderCache = () => {
+  databaseProviderCache = null;
+  console.log('🔄 Database provider cache cleared');
+};
+
 // 獲取當前數據庫提供者 (優化版本，MongoDB 優先)
 const getDatabaseProvider = async (): Promise<DatabaseProvider> => {
   // 使用緩存結果，避免頻繁檢查
@@ -65,12 +71,10 @@ const getDatabaseProvider = async (): Promise<DatabaseProvider> => {
   }
 
   // 檢查環境變量配置
-  const hasMongoDBConfig = !!(import.meta.env.VITE_MONGODB_URI);
   const hasSupabaseConfig = !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY);
   const hasFirebaseConfig = !!(import.meta.env.VITE_FIREBASE_API_KEY && import.meta.env.VITE_FIREBASE_PROJECT_ID);
   
   console.log('🔍 Database provider check (cached for 10min):', {
-    hasMongoDBConfig,
     hasSupabaseConfig,
     hasFirebaseConfig,
     isOnline: navigator.onLine
@@ -84,7 +88,7 @@ const getDatabaseProvider = async (): Promise<DatabaseProvider> => {
     selectedProvider = 'localStorage';
   }
   // 優先使用 MongoDB (通過後端 API)
-  else if (hasMongoDBConfig) {
+  else {
     try {
       const isMongoDBConnected = await checkMongoBackendConnection();
       if (isMongoDBConnected) {
