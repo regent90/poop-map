@@ -48,6 +48,7 @@ import {
 import { checkMongoBackendConnection } from './mongoBackendAPI';
 import { checkSupabaseConnection } from '../supabase';
 import { checkFirebaseConnection } from '../firebase';
+import { error } from 'console';
 
 // 數據庫提供者類型
 type DatabaseProvider = 'mongodb' | 'supabase' | 'firebase' | 'localStorage';
@@ -67,6 +68,7 @@ const getDatabaseProvider = async (): Promise<DatabaseProvider> => {
   // 使用緩存結果，避免頻繁檢查
   if (databaseProviderCache && 
       Date.now() - databaseProviderCache.timestamp < PROVIDER_CACHE_DURATION) {
+    console.log('🔄 Using cached database provider:', databaseProviderCache.provider);
     return databaseProviderCache.provider;
   }
 
@@ -88,35 +90,33 @@ const getDatabaseProvider = async (): Promise<DatabaseProvider> => {
     console.log('📱 Using localStorage (offline mode)');
     selectedProvider = 'localStorage';
   }
-  // 優先使用 MongoDB (通過後端 API)
+  // 強制使用 MongoDB 作為主要數據庫
   else {
-    console.log('🔍 Trying MongoDB backend API as primary database...');
-    
-    // 直接設置為 MongoDB，不進行連接檢查（避免阻塞）
+    console.log('🔍 Setting MongoDB as primary database (forced)');
     selectedProvider = 'mongodb';
-    console.log('✅ Using MongoDB (backend API) as database provider - SET AS DEFAULT');
+    console.log('✅ MongoDB set as database provider - FORCED DEFAULT');
     
-    // 在背景中驗證連接狀態（不影響選擇）
+    // 在背景中驗證連接狀態（僅用於日誌）
     checkMongoBackendConnection()
       .then(isConnected => {
         if (isConnected) {
           console.log('✅ MongoDB backend connection verified in background');
         } else {
-          console.warn('⚠️ MongoDB backend connection verification failed in background');
+          console.warn('⚠️ MongoDB backend connection verification failed in background (but still using MongoDB)');
         }
       })
       .catch(error => {
-        console.warn('⚠️ MongoDB backend connection verification error:', error);
+        console.warn('⚠️ MongoDB backend connection verification error (but still using MongoDB):', error);
       });
   }
-      console.warn('⚠️ Supabase connection failed, trying Firebase:', error);
-
 
   // 緩存結果
   databaseProviderCache = {
     provider: selectedProvider,
     timestamp: Date.now()
   };
+
+  console.log('💾 Database provider cached:', selectedProvider);
 
   if (selectedProvider === 'localStorage') {
     console.log('📱 Using localStorage as fallback');

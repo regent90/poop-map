@@ -34,10 +34,22 @@ export const DatabaseDebugPanel: React.FC = () => {
         mongoConnectionTest = 'error';
       }
 
+      // 檢查當前使用的數據庫提供者
+      let currentProvider = 'unknown';
+      try {
+        // 動態導入統一數據庫服務
+        const unifiedDB = await import('../services/unifiedDatabase');
+        // 這裡我們無法直接調用 getDatabaseProvider，但可以通過其他方式檢查
+        currentProvider = 'checking...';
+      } catch (error) {
+        currentProvider = 'error';
+      }
+
       setDebugInfo({
         ...envInfo,
         mongoStatus,
         mongoConnectionTest,
+        currentProvider,
         timestamp: new Date().toISOString()
       });
     } catch (error) {
@@ -92,6 +104,13 @@ export const DatabaseDebugPanel: React.FC = () => {
               debugInfo.mongoConnectionTest === 'connected' ? '✅ 已連接' :
               debugInfo.mongoConnectionTest === 'failed' ? '❌ 連接失敗' :
               debugInfo.mongoConnectionTest === 'error' ? '🔴 測試錯誤' : '⏳ 測試中...'
+            }</div>
+            <div>當前提供者: {
+              debugInfo.currentProvider === 'mongodb' ? '✅ MongoDB' :
+              debugInfo.currentProvider === 'supabase' ? '🔵 Supabase' :
+              debugInfo.currentProvider === 'firebase' ? '🟠 Firebase' :
+              debugInfo.currentProvider === 'localStorage' ? '📱 localStorage' :
+              debugInfo.currentProvider === 'error' ? '🔴 錯誤' : '⏳ 檢查中...'
             }</div>
           </div>
         </div>
