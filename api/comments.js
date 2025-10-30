@@ -2,8 +2,10 @@ const { MongoClient } = require('mongodb');
 
 const uri = process.env.MONGODB_URI;
 const options = {
-  serverSelectionTimeoutMS: 5000,
+  serverSelectionTimeoutMS: 10000,
   socketTimeoutMS: 45000,
+  maxPoolSize: 10,
+  minPoolSize: 5,
 };
 
 let client;

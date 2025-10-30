@@ -24,12 +24,19 @@ export default async function handler(req, res) {
     }
 
     // 測試 MongoDB 連接
+    console.log('🔄 Testing MongoDB connection with URI:', mongoUri.replace(/\/\/.*@/, '//***:***@'));
+    
     const options = {
-      serverSelectionTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 10000,
       socketTimeoutMS: 45000,
+      maxPoolSize: 10,
+      minPoolSize: 5,
     };
+    
     const client = new MongoClient(mongoUri, options);
+    console.log('🔄 Attempting to connect...');
     await client.connect();
+    console.log('✅ MongoDB connection established');
     
     const db = client.db(dbName);
     const collections = await db.listCollections().toArray();
