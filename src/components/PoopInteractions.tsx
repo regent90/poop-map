@@ -220,7 +220,7 @@ export const PoopInteractions: React.FC<PoopInteractionsProps> = ({
                       {comment.userName}
                     </span>
                     <span className="text-xs text-gray-500">
-                      {new Date(comment.timestamp * 1000).toLocaleString()}
+                      {new Date(comment.timestamp).toLocaleString()}
                     </span>
                   </div>
                   {comment.userEmail === currentUser?.email && (
