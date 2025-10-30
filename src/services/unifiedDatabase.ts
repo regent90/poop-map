@@ -1,6 +1,21 @@
 import { Poop, Friend, FriendRequest } from '../types';
 
-// Supabase 服務
+// MongoDB 服務 (主要)
+import {
+  savePoopToMongoDB,
+  getUserPoopsFromMongoDB,
+  getFriendsPoopsFromMongoDB,
+  getPublicPoopsFromMongoDB,
+  saveFriendToMongoDB,
+  getUserFriendsFromMongoDB,
+  sendFriendRequestToMongoDB,
+  getUserFriendRequestsFromMongoDB,
+  updateFriendRequestStatusInMongoDB,
+  subscribeToUserPoopsInMongoDB,
+  subscribeToFriendRequestsInMongoDB
+} from './mongoDatabase';
+
+// Supabase 服務 (備選)
 import {
   savePoopToSupabase,
   getUserPoopsFromSupabase,
@@ -30,17 +45,18 @@ import {
   subscribeToFriendRequests as subscribeToFriendRequestsInFirebase
 } from './database';
 
+import { checkMongoDBConnection } from '../mongodb';
 import { checkSupabaseConnection } from '../supabase';
 import { checkFirebaseConnection } from '../firebase';
 
 // 數據庫提供者類型
-type DatabaseProvider = 'supabase' | 'firebase' | 'localStorage';
+type DatabaseProvider = 'mongodb' | 'supabase' | 'firebase' | 'localStorage';
 
 // 數據庫提供者緩存
 let databaseProviderCache: { provider: DatabaseProvider; timestamp: number } | null = null;
 const PROVIDER_CACHE_DURATION = 10 * 60 * 1000; // 10 分鐘緩存
 
-// 獲取當前數據庫提供者 (優化版本)
+// 獲取當前數據庫提供者 (優化版本，MongoDB 優先)
 const getDatabaseProvider = async (): Promise<DatabaseProvider> => {
   // 使用緩存結果，避免頻繁檢查
   if (databaseProviderCache && 
@@ -49,10 +65,12 @@ const getDatabaseProvider = async (): Promise<DatabaseProvider> => {
   }
 
   // 檢查環境變量配置
+  const hasMongoDBConfig = !!(import.meta.env.VITE_MONGODB_URI);
   const hasSupabaseConfig = !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY);
   const hasFirebaseConfig = !!(import.meta.env.VITE_FIREBASE_API_KEY && import.meta.env.VITE_FIREBASE_PROJECT_ID);
   
   console.log('🔍 Database provider check (cached for 10min):', {
+    hasMongoDBConfig,
     hasSupabaseConfig,
     hasFirebaseConfig,
     isOnline: navigator.onLine
@@ -65,7 +83,52 @@ const getDatabaseProvider = async (): Promise<DatabaseProvider> => {
     console.log('📱 Using localStorage (offline mode)');
     selectedProvider = 'localStorage';
   }
-  // 優先使用 Supabase
+  // 優先使用 MongoDB Atlas
+  else if (hasMongoDBConfig) {
+    try {
+      const isMongoDBConnected = await checkMongoDBConnection();
+      if (isMongoDBConnected) {
+        console.log('✅ Using MongoDB Atlas as database provider');
+        selectedProvider = 'mongodb';
+      } else {
+        throw new Error('MongoDB connection failed');
+      }
+    } catch (error) {
+      console.warn('⚠️ MongoDB connection failed, trying Supabase:', error);
+      
+      // 備選使用 Supabase
+      if (hasSupabaseConfig) {
+        try {
+          const isSupabaseConnected = await checkSupabaseConnection();
+          if (isSupabaseConnected) {
+            console.log('✅ Using Supabase as database provider (fallback)');
+            selectedProvider = 'supabase';
+          } else {
+            throw new Error('Supabase connection failed');
+          }
+        } catch (error) {
+          console.warn('⚠️ Supabase connection failed, trying Firebase:', error);
+          
+          // 最後備選使用 Firebase
+          if (hasFirebaseConfig) {
+            try {
+              const isFirebaseConnected = await checkFirebaseConnection();
+              if (isFirebaseConnected) {
+                console.log('✅ Using Firebase as database provider (fallback)');
+                selectedProvider = 'firebase';
+              } else {
+                selectedProvider = 'localStorage';
+              }
+            } catch (error) {
+              console.warn('⚠️ Firebase connection failed:', error);
+              selectedProvider = 'localStorage';
+            }
+          }
+        }
+      }
+    }
+  }
+  // 如果沒有 MongoDB，嘗試 Supabase
   else if (hasSupabaseConfig) {
     try {
       const isSupabaseConnected = await checkSupabaseConnection();
@@ -95,7 +158,7 @@ const getDatabaseProvider = async (): Promise<DatabaseProvider> => {
       }
     }
   }
-  // 如果沒有 Supabase，嘗試 Firebase
+  // 如果只有 Firebase，使用 Firebase
   else if (hasFirebaseConfig) {
     try {
       const isFirebaseConnected = await checkFirebaseConnection();
@@ -151,6 +214,8 @@ export const savePoopToCloud = async (poop: Poop): Promise<string> => {
   
   try {
     switch (provider) {
+      case 'mongodb':
+        return await savePoopToMongoDB(poop);
       case 'supabase':
         return await savePoopToSupabase(poop);
       case 'firebase':
@@ -179,6 +244,8 @@ export const getUserPoops = async (userEmail: string): Promise<Poop[]> => {
   
   try {
     switch (provider) {
+      case 'mongodb':
+        return await getUserPoopsFromMongoDB(userEmail);
       case 'supabase':
         return await getUserPoopsFromSupabase(userEmail);
       case 'firebase':
@@ -198,6 +265,8 @@ export const getFriendsPoops = async (friendEmails: string[]): Promise<Poop[]> =
   
   try {
     switch (provider) {
+      case 'mongodb':
+        return await getFriendsPoopsFromMongoDB(friendEmails);
       case 'supabase':
         return await getFriendsPoopsFromSupabase(friendEmails);
       case 'firebase':
@@ -234,6 +303,8 @@ export const getPublicPoops = async (): Promise<Poop[]> => {
   
   try {
     switch (provider) {
+      case 'mongodb':
+        return await getPublicPoopsFromMongoDB();
       case 'supabase':
         return await getPublicPoopsFromSupabase();
       case 'firebase':
@@ -262,6 +333,9 @@ export const saveFriendToCloud = async (userEmail: string, friend: Friend): Prom
   
   try {
     switch (provider) {
+      case 'mongodb':
+        await saveFriendToMongoDB(userEmail, friend);
+        break;
       case 'supabase':
         await saveFriendToSupabase(userEmail, friend);
         break;
@@ -298,6 +372,8 @@ export const getUserFriends = async (userEmail: string): Promise<Friend[]> => {
   
   try {
     switch (provider) {
+      case 'mongodb':
+        return await getUserFriendsFromMongoDB(userEmail);
       case 'supabase':
         return await getUserFriendsFromSupabase(userEmail);
       case 'firebase':
@@ -318,6 +394,8 @@ export const sendFriendRequest = async (request: FriendRequest): Promise<string>
   
   try {
     switch (provider) {
+      case 'mongodb':
+        return await sendFriendRequestToMongoDB(request);
       case 'supabase':
         return await sendFriendRequestToSupabase(request);
       case 'firebase':
@@ -345,6 +423,8 @@ export const getUserFriendRequests = async (userEmail: string): Promise<FriendRe
   
   try {
     switch (provider) {
+      case 'mongodb':
+        return await getUserFriendRequestsFromMongoDB(userEmail);
       case 'supabase':
         return await getUserFriendRequestsFromSupabase(userEmail);
       case 'firebase':
@@ -364,6 +444,9 @@ export const updateFriendRequestStatus = async (requestId: string, status: 'acce
   
   try {
     switch (provider) {
+      case 'mongodb':
+        await updateFriendRequestStatusInMongoDB(requestId, status);
+        break;
       case 'supabase':
         await updateFriendRequestStatusInSupabase(requestId, status);
         break;
@@ -394,6 +477,8 @@ export const updateFriendRequestStatus = async (requestId: string, status: 'acce
 export const subscribeToUserPoops = (userEmail: string, callback: (poops: Poop[]) => void) => {
   getDatabaseProvider().then(provider => {
     switch (provider) {
+      case 'mongodb':
+        return subscribeToUserPoopsInMongoDB(userEmail, callback);
       case 'supabase':
         return subscribeToUserPoopsInSupabase(userEmail, callback);
       case 'firebase':
@@ -413,6 +498,8 @@ export const subscribeToUserPoops = (userEmail: string, callback: (poops: Poop[]
 export const subscribeToFriendRequests = (userEmail: string, callback: (requests: FriendRequest[]) => void) => {
   getDatabaseProvider().then(provider => {
     switch (provider) {
+      case 'mongodb':
+        return subscribeToFriendRequestsInMongoDB(userEmail, callback);
       case 'supabase':
         return subscribeToFriendRequestsInSupabase(userEmail, callback);
       case 'firebase':

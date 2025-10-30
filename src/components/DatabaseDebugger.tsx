@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { getCurrentDatabaseProvider } from '../services/unifiedDatabase';
 import { DataMigrationTool } from './DataMigrationTool';
+import { MongoMigrationTool } from './MongoMigrationTool';
 
 export const DatabaseDebugger: React.FC = () => {
   const [currentProvider, setCurrentProvider] = useState<string>('loading...');
   const [localStorageData, setLocalStorageData] = useState<any[]>([]);
   const [showMigrationTool, setShowMigrationTool] = useState(false);
+  const [showMongoTool, setShowMongoTool] = useState(false);
 
   useEffect(() => {
     // 檢查當前數據庫提供者
@@ -50,13 +52,27 @@ export const DatabaseDebugger: React.FC = () => {
     <div className="fixed top-20 right-4 bg-white border border-gray-300 rounded-lg shadow-lg p-4 max-w-md max-h-96 overflow-y-auto z-50">
       <div className="flex justify-between items-center mb-3">
         <h3 className="font-bold text-lg">🔍 數據庫調試器</h3>
-        <button
-          onClick={() => setShowMigrationTool(!showMigrationTool)}
-          className="text-sm bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700"
-        >
-          {showMigrationTool ? '隱藏' : '遷移'}
-        </button>
+        <div className="flex gap-1">
+          <button
+            onClick={() => setShowMongoTool(!showMongoTool)}
+            className="text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700"
+          >
+            MongoDB
+          </button>
+          <button
+            onClick={() => setShowMigrationTool(!showMigrationTool)}
+            className="text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700"
+          >
+            Supabase
+          </button>
+        </div>
       </div>
+
+      {showMongoTool && (
+        <div className="mb-4">
+          <MongoMigrationTool />
+        </div>
+      )}
 
       {showMigrationTool && (
         <div className="mb-4">
@@ -113,6 +129,12 @@ export const DatabaseDebugger: React.FC = () => {
         <div className="bg-yellow-50 p-3 rounded">
           <h4 className="font-semibold text-yellow-800">查看數據位置</h4>
           <div className="text-xs text-yellow-700 space-y-1">
+            {currentProvider === 'mongodb' && (
+              <>
+                <p>• MongoDB Atlas: poops 集合</p>
+                <p>• 備份: 瀏覽器 localStorage</p>
+              </>
+            )}
             {currentProvider === 'supabase' && (
               <>
                 <p>• Supabase: Table Editor → poops 表</p>
