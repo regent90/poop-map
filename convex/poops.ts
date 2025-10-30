@@ -42,14 +42,28 @@ export const getUserPoops = query({
 export const getFriendsPoops = query({
   args: { friendEmails: v.array(v.string()) },
   handler: async (ctx, args) => {
-    if (args.friendEmails.length === 0) return [];
+    if (args.friendEmails.length === 0) {
+      console.log("No friend emails provided");
+      return [];
+    }
 
+    console.log(`🔍 Looking for friends poops for emails:`, args.friendEmails);
+    
     const allPoops = await ctx.db.query("poops").collect();
+    console.log(`📊 Total poops in database: ${allPoops.length}`);
+    
+    // 調試：顯示所有便便的用戶和隱私設定
+    allPoops.forEach(poop => {
+      console.log(`Poop: userId=${poop.userId}, privacy=${poop.privacy}`);
+    });
+    
     const friendsPoops = allPoops.filter(poop => 
       args.friendEmails.includes(poop.userId) && 
       (poop.privacy === "friends" || poop.privacy === "public")
     );
 
+    console.log(`🔍 Filtered friends poops: ${friendsPoops.length}`);
+    
     // 按時間戳排序
     friendsPoops.sort((a, b) => b.timestamp - a.timestamp);
     
@@ -62,6 +76,17 @@ export const getFriendsPoops = query({
 export const getPublicPoops = query({
   args: {},
   handler: async (ctx) => {
+    // 先獲取所有便便來調試
+    const allPoops = await ctx.db.query("poops").collect();
+    console.log(`📊 Total poops in database: ${allPoops.length}`);
+    
+    // 調試：顯示所有便便的隱私設定
+    const privacyCounts = allPoops.reduce((acc, poop) => {
+      acc[poop.privacy] = (acc[poop.privacy] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    console.log(`📊 Privacy distribution:`, privacyCounts);
+    
     const poops = await ctx.db
       .query("poops")
       .withIndex("by_privacy", (q) => q.eq("privacy", "public"))

@@ -255,6 +255,11 @@ export const getFriendsPoops = async (friendEmails: string[]): Promise<Poop[]> =
   
   try {
     switch (provider) {
+      case 'convex':
+        console.log('🚀 Getting friends poops from Convex');
+        const convexFriendsPoops = await getFriendsPoopsFromConvex(friendEmails);
+        console.log(`✅ Got ${convexFriendsPoops.length} friends poops from Convex`);
+        return convexFriendsPoops;
       case 'mongodb':
         return await getFriendsPoopsFromMongoDB(friendEmails);
       case 'supabase':
@@ -293,6 +298,11 @@ export const getPublicPoops = async (): Promise<Poop[]> => {
   
   try {
     switch (provider) {
+      case 'convex':
+        console.log('🚀 Getting public poops from Convex');
+        const convexPublicPoops = await getPublicPoopsFromConvex();
+        console.log(`✅ Got ${convexPublicPoops.length} public poops from Convex`);
+        return convexPublicPoops;
       case 'mongodb':
         return await getPublicPoopsFromMongoDB();
       case 'supabase':
