@@ -351,6 +351,10 @@ export const saveFriendToCloud = async (userEmail: string, friend: Friend): Prom
   
   try {
     switch (provider) {
+      case 'convex':
+        console.log('🚀 Saving friend to Convex');
+        await saveFriendToConvex(userEmail, friend);
+        break;
       case 'mongodb':
         await saveFriendToMongoDB(userEmail, friend);
         break;
@@ -390,6 +394,9 @@ export const getUserFriends = async (userEmail: string): Promise<Friend[]> => {
   
   try {
     switch (provider) {
+      case 'convex':
+        console.log('🚀 Getting friends from Convex');
+        return await getUserFriendsFromConvex(userEmail);
       case 'mongodb':
         return await getUserFriendsFromMongoDB(userEmail);
       case 'supabase':
@@ -414,6 +421,10 @@ export const removeFriend = async (userEmail: string, friendEmail: string): Prom
   
   try {
     switch (provider) {
+      case 'convex':
+        console.log('🚀 Removing from Convex...');
+        await removeFriendFromConvex(userEmail, friendEmail);
+        break;
       case 'mongodb':
         console.log('🍃 Removing from MongoDB...');
         const { removeFriendFromBackend } = await import('./mongoBackendAPI');
@@ -455,6 +466,9 @@ export const sendFriendRequest = async (request: FriendRequest): Promise<string>
   
   try {
     switch (provider) {
+      case 'convex':
+        console.log('🚀 Sending friend request to Convex');
+        return await sendFriendRequestToConvex(request);
       case 'mongodb':
         return await sendFriendRequestToMongoDB(request);
       case 'supabase':
@@ -484,6 +498,9 @@ export const getUserFriendRequests = async (userEmail: string): Promise<FriendRe
   
   try {
     switch (provider) {
+      case 'convex':
+        console.log('🚀 Getting friend requests from Convex');
+        return await getUserFriendRequestsFromConvex(userEmail);
       case 'mongodb':
         return await getUserFriendRequestsFromMongoDB(userEmail);
       case 'supabase':
@@ -505,6 +522,10 @@ export const updateFriendRequestStatus = async (requestId: string, status: 'acce
   
   try {
     switch (provider) {
+      case 'convex':
+        console.log('🚀 Updating friend request status in Convex');
+        await updateFriendRequestStatusInConvex(requestId, status);
+        break;
       case 'mongodb':
         await updateFriendRequestStatusInMongoDB(requestId, status);
         break;
@@ -613,21 +634,48 @@ export const getPoopComments = async (poopId: string) => {
 };
 
 export const deletePoopComment = async (commentId: string): Promise<void> => {
-  console.log('🗑️ Deleting comment from MongoDB');
-  const { deleteCommentFromBackend } = await import('./mongoBackendAPI');
-  return await deleteCommentFromBackend(commentId);
+  const provider = await getDatabaseProvider();
+  
+  switch (provider) {
+    case 'convex':
+      console.log('🗑️ Deleting comment from Convex');
+      return await deleteCommentFromConvex(commentId);
+    case 'mongodb':
+    default:
+      console.log('🗑️ Deleting comment from MongoDB');
+      const { deleteCommentFromBackend } = await import('./mongoBackendAPI');
+      return await deleteCommentFromBackend(commentId);
+  }
 };
 
 export const addPoopLike = async (poopId: string, userId: string, userEmail: string, userName: string, userPicture?: string): Promise<string> => {
-  console.log('👍 Adding like to MongoDB');
-  const { addLikeToBackend } = await import('./mongoBackendAPI');
-  return await addLikeToBackend(poopId, userId, userEmail, userName, userPicture);
+  const provider = await getDatabaseProvider();
+  
+  switch (provider) {
+    case 'convex':
+      console.log('👍 Adding like to Convex');
+      return await addLikeToConvex(poopId, userId, userEmail, userName, userPicture);
+    case 'mongodb':
+    default:
+      console.log('👍 Adding like to MongoDB');
+      const { addLikeToBackend } = await import('./mongoBackendAPI');
+      return await addLikeToBackend(poopId, userId, userEmail, userName, userPicture);
+  }
 };
 
 export const removePoopLike = async (poopId: string, userId: string): Promise<void> => {
-  console.log('👎 Removing like from MongoDB');
-  const { removeLikeFromBackend } = await import('./mongoBackendAPI');
-  return await removeLikeFromBackend(poopId, userId);
+  const provider = await getDatabaseProvider();
+  
+  switch (provider) {
+    case 'convex':
+      console.log('👎 Removing like from Convex');
+      return await removeLikeFromConvex(poopId, userId);
+    case 'mongodb':
+    default:
+      console.log('👎 Removing like from MongoDB');
+      const { removeLikeFromBackend } = await import('./mongoBackendAPI');
+      return await removeLikeFromBackend(poopId, userId);
+  }
 };
 
 export const subscribeToPoopInteractions = (poopId: string, callback: (data: { likes: any[], comments: any[] }) => void) => {
