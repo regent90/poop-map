@@ -365,3 +365,130 @@ export const subscribeToFriendRequestsInBackend = (userEmail: string, callback: 
     clearInterval(interval);
   };
 };
+
+// 留言相關操作
+export const addCommentToBackend = async (poopId: string, userId: string, userEmail: string, userName: string, content: string, userPicture?: string): Promise<string> => {
+  try {
+    const result = await callAPI('/comments', {
+      method: 'POST',
+      body: JSON.stringify({
+        poopId,
+        userId,
+        userEmail,
+        userName,
+        content,
+        userPicture
+      })
+    });
+
+    console.log('✅ Comment added to MongoDB backend:', result.insertedId);
+    return result.insertedId;
+  } catch (error) {
+    console.error('❌ Failed to add comment to MongoDB backend:', error);
+    throw error;
+  }
+};
+
+export const getCommentsFromBackend = async (poopId: string): Promise<any[]> => {
+  try {
+    const result = await callAPI(`/comments?poopId=${encodeURIComponent(poopId)}`);
+    
+    console.log(`✅ Fetched ${result.data.length} comments for poop ${poopId} from MongoDB backend`);
+    return result.data;
+  } catch (error) {
+    console.error('❌ Failed to fetch comments from MongoDB backend:', error);
+    throw error;
+  }
+};
+
+export const deleteCommentFromBackend = async (commentId: string): Promise<void> => {
+  try {
+    const result = await callAPI(`/comments?commentId=${encodeURIComponent(commentId)}`, {
+      method: 'DELETE'
+    });
+
+    console.log('✅ Comment deleted from MongoDB backend:', commentId);
+  } catch (error) {
+    console.error('❌ Failed to delete comment from MongoDB backend:', error);
+    throw error;
+  }
+};
+
+// 按讚相關操作
+export const addLikeToBackend = async (poopId: string, userId: string, userEmail: string, userName: string, userPicture?: string): Promise<string> => {
+  try {
+    const result = await callAPI('/likes', {
+      method: 'POST',
+      body: JSON.stringify({
+        poopId,
+        userId,
+        userEmail,
+        userName,
+        userPicture
+      })
+    });
+
+    console.log('✅ Like added to MongoDB backend:', result.insertedId);
+    return result.insertedId;
+  } catch (error: any) {
+    if (error.message && error.message.includes('ALREADY_LIKED')) {
+      throw new Error('已經按過讚了');
+    }
+    console.error('❌ Failed to add like to MongoDB backend:', error);
+    throw error;
+  }
+};
+
+export const getLikesFromBackend = async (poopId: string): Promise<any[]> => {
+  try {
+    const result = await callAPI(`/likes?poopId=${encodeURIComponent(poopId)}`);
+    
+    console.log(`✅ Fetched ${result.data.length} likes for poop ${poopId} from MongoDB backend`);
+    return result.data;
+  } catch (error) {
+    console.error('❌ Failed to fetch likes from MongoDB backend:', error);
+    throw error;
+  }
+};
+
+export const removeLikeFromBackend = async (poopId: string, userId: string): Promise<void> => {
+  try {
+    const result = await callAPI(`/likes?poopId=${encodeURIComponent(poopId)}&userId=${encodeURIComponent(userId)}`, {
+      method: 'DELETE'
+    });
+
+    console.log('✅ Like removed from MongoDB backend:', { poopId, userId });
+  } catch (error) {
+    console.error('❌ Failed to remove like from MongoDB backend:', error);
+    throw error;
+  }
+};
+
+// 實時監聽便便的互動數據（使用輪詢）
+export const subscribeToPoopInteractionsInBackend = (poopId: string, callback: (data: { likes: any[], comments: any[] }) => void) => {
+  console.log(`🔄 Setting up polling subscription for poop interactions: ${poopId}`);
+  
+  const pollForChanges = async () => {
+    try {
+      const [likes, comments] = await Promise.all([
+        getLikesFromBackend(poopId),
+        getCommentsFromBackend(poopId)
+      ]);
+      
+      callback({ likes, comments });
+    } catch (error) {
+      console.error('❌ Error in MongoDB backend interactions polling:', error);
+    }
+  };
+
+  // 立即執行一次
+  pollForChanges();
+
+  // 每 30 秒輪詢一次
+  const interval = setInterval(pollForChanges, 30000);
+
+  return () => {
+    console.log(`🔄 Stopping polling for poop interactions: ${poopId}`);
+    clearInterval(interval);
+  };
+};
