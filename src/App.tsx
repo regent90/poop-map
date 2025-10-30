@@ -906,8 +906,8 @@ const App: React.FC = () => {
       // 更新 localStorage 備份
       saveFriends(updatedFriends);
       
-      console.log(`✅ Friend ${friendEmail} removed successfully`);
-      alert(`✅ 已解除與 ${friendEmail} 的好友關係\nFriend ${friendEmail} removed successfully`);
+      console.log(`✅ Mutual friendship with ${friendEmail} removed successfully`);
+      alert(`✅ 已解除與 ${friendEmail} 的雙向好友關係\nMutual friendship with ${friendEmail} removed successfully`);
       
       // 重新載入好友便便數據
       if (updatedFriends.length > 0) {

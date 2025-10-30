@@ -423,49 +423,65 @@ export const getUserFriends = async (userEmail: string): Promise<Friend[]> => {
   }
 };
 
-// 解除好友功能 (單面解除)
+// 解除好友功能 (雙向解除)
 export const removeFriend = async (userEmail: string, friendEmail: string): Promise<void> => {
   const provider = await getDatabaseProvider();
   
-  console.log(`🗑️ Removing friend ${friendEmail} from ${userEmail} using provider:`, provider);
+  console.log(`🗑️ Removing mutual friendship between ${userEmail} and ${friendEmail} using provider:`, provider);
   
   try {
     switch (provider) {
       case 'convex':
-        console.log('🚀 Removing from Convex...');
+        console.log('🚀 Removing mutual friendship from Convex...');
+        // 移除雙方的好友關係
         await removeFriendFromConvex(userEmail, friendEmail);
+        await removeFriendFromConvex(friendEmail, userEmail);
         break;
       case 'mongodb':
-        console.log('🍃 Removing from MongoDB...');
+        console.log('🍃 Removing mutual friendship from MongoDB...');
         const { removeFriendFromBackend } = await import('./mongoBackendAPI');
         await removeFriendFromBackend(userEmail, friendEmail);
+        await removeFriendFromBackend(friendEmail, userEmail);
         break;
       case 'supabase':
-        console.log('🔵 Removing from Supabase...');
+        console.log('🔵 Removing mutual friendship from Supabase...');
         const { removeFriendFromSupabase } = await import('./supabaseDatabase');
         await removeFriendFromSupabase(userEmail, friendEmail);
+        await removeFriendFromSupabase(friendEmail, userEmail);
         break;
       case 'firebase':
-        console.log('🟠 Removing from Firebase...');
+        console.log('🟠 Removing mutual friendship from Firebase...');
         // TODO: 實現 Firebase 解除好友功能
         throw new Error('Firebase remove friend not implemented yet');
       case 'localStorage':
       default:
-        console.log('📱 Removing from localStorage...');
+        console.log('📱 Removing mutual friendship from localStorage...');
+        // 移除用戶 A 的好友列表中的用戶 B
         const userFriends = getFromLocalStorage(`friends_${userEmail}`, []);
-        const updatedFriends = userFriends.filter((f: Friend) => f.email !== friendEmail);
-        saveToLocalStorage(`friends_${userEmail}`, updatedFriends);
-        console.log('📱 Friend removed from localStorage');
+        const updatedUserFriends = userFriends.filter((f: Friend) => f.email !== friendEmail);
+        saveToLocalStorage(`friends_${userEmail}`, updatedUserFriends);
+        
+        // 移除用戶 B 的好友列表中的用戶 A
+        const friendFriends = getFromLocalStorage(`friends_${friendEmail}`, []);
+        const updatedFriendFriends = friendFriends.filter((f: Friend) => f.email !== userEmail);
+        saveToLocalStorage(`friends_${friendEmail}`, updatedFriendFriends);
+        
+        console.log('📱 Mutual friendship removed from localStorage');
     }
     
-    console.log(`✅ Friend ${friendEmail} successfully removed from ${userEmail}'s friend list`);
+    console.log(`✅ Mutual friendship between ${userEmail} and ${friendEmail} successfully removed`);
   } catch (error) {
-    console.error('❌ Error removing friend, falling back to localStorage:', error);
+    console.error('❌ Error removing mutual friendship, falling back to localStorage:', error);
     // 錯誤時回退到 localStorage
     const userFriends = getFromLocalStorage(`friends_${userEmail}`, []);
-    const updatedFriends = userFriends.filter((f: Friend) => f.email !== friendEmail);
-    saveToLocalStorage(`friends_${userEmail}`, updatedFriends);
-    console.log('📱 Friend removed from localStorage (fallback)');
+    const updatedUserFriends = userFriends.filter((f: Friend) => f.email !== friendEmail);
+    saveToLocalStorage(`friends_${userEmail}`, updatedUserFriends);
+    
+    const friendFriends = getFromLocalStorage(`friends_${friendEmail}`, []);
+    const updatedFriendFriends = friendFriends.filter((f: Friend) => f.email !== userEmail);
+    saveToLocalStorage(`friends_${friendEmail}`, updatedFriendFriends);
+    
+    console.log('📱 Mutual friendship removed from localStorage (fallback)');
     throw error;
   }
 };
