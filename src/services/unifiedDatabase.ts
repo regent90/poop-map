@@ -150,16 +150,24 @@ const getFromLocalStorage = <T>(key: string, defaultValue: T): T => {
 export const savePoopToCloud = async (poop: Poop): Promise<string> => {
   const provider = await getDatabaseProvider();
   
+  console.log('💾 Saving poop using provider:', provider);
+  
   try {
     switch (provider) {
       case 'mongodb':
-        return await savePoopToMongoDB(poop);
+        console.log('🍃 Saving to MongoDB...');
+        const mongoId = await savePoopToMongoDB(poop);
+        console.log('✅ Poop saved to MongoDB:', mongoId);
+        return mongoId;
       case 'supabase':
+        console.log('🔵 Saving to Supabase...');
         return await savePoopToSupabase(poop);
       case 'firebase':
+        console.log('🟠 Saving to Firebase...');
         return await savePoopToFirebase(poop);
       case 'localStorage':
       default:
+        console.log('📱 Saving to localStorage...');
         // 保存到 localStorage
         const userPoops = getFromLocalStorage(`poops_${poop.userId}`, []);
         userPoops.push(poop);
@@ -173,6 +181,7 @@ export const savePoopToCloud = async (poop: Poop): Promise<string> => {
     const userPoops = getFromLocalStorage(`poops_${poop.userId}`, []);
     userPoops.push(poop);
     saveToLocalStorage(`poops_${poop.userId}`, userPoops);
+    console.log('📱 Poop saved to localStorage (fallback)');
     return poop.id;
   }
 };
@@ -180,21 +189,33 @@ export const savePoopToCloud = async (poop: Poop): Promise<string> => {
 export const getUserPoops = async (userEmail: string): Promise<Poop[]> => {
   const provider = await getDatabaseProvider();
   
+  console.log('📖 Getting user poops using provider:', provider);
+  
   try {
     switch (provider) {
       case 'mongodb':
-        return await getUserPoopsFromMongoDB(userEmail);
+        console.log('🍃 Getting from MongoDB...');
+        const mongoPoops = await getUserPoopsFromMongoDB(userEmail);
+        console.log(`✅ Got ${mongoPoops.length} poops from MongoDB`);
+        return mongoPoops;
       case 'supabase':
+        console.log('🔵 Getting from Supabase...');
         return await getUserPoopsFromSupabase(userEmail);
       case 'firebase':
+        console.log('🟠 Getting from Firebase...');
         return await getUserPoopsFromFirebase(userEmail);
       case 'localStorage':
       default:
-        return getFromLocalStorage(`poops_${userEmail}`, []);
+        console.log('📱 Getting from localStorage...');
+        const localPoops = getFromLocalStorage(`poops_${userEmail}`, []);
+        console.log(`📱 Got ${localPoops.length} poops from localStorage`);
+        return localPoops;
     }
   } catch (error) {
     console.error('❌ Error getting user poops, falling back to localStorage:', error);
-    return getFromLocalStorage(`poops_${userEmail}`, []);
+    const fallbackPoops = getFromLocalStorage(`poops_${userEmail}`, []);
+    console.log(`📱 Fallback: Got ${fallbackPoops.length} poops from localStorage`);
+    return fallbackPoops;
   }
 };
 
@@ -457,4 +478,104 @@ export const subscribeToFriendRequests = (userEmail: string, callback: (requests
 // 獲取當前使用的數據庫提供者（用於 UI 顯示）
 export const getCurrentDatabaseProvider = async (): Promise<DatabaseProvider> => {
   return await getDatabaseProvider();
+};
+// 留言和按讚功能（主要支持 MongoDB）
+export const addPoopComment = async (poopId: string, userId: string, userEmail: string, userName: string, content: string, userPicture?: string): Promise<string> => {
+  const provider = await getDatabaseProvider();
+  
+  console.log('💬 Adding comment using provider:', provider);
+  
+  if (provider === 'mongodb') {
+    const { addCommentToBackend } = await import('./mongoBackendAPI');
+    return await addCommentToBackend(poopId, userId, userEmail, userName, content, userPicture);
+  } else {
+    // 對於其他數據庫，使用 Firebase 的留言功能
+    const { addPoopComment: addPoopCommentToFirebase } = await import('./database');
+    return await addPoopCommentToFirebase(poopId, userId, userEmail, userName, content, userPicture);
+  }
+};
+
+export const getPoopComments = async (poopId: string) => {
+  const provider = await getDatabaseProvider();
+  
+  console.log('📖 Getting comments using provider:', provider);
+  
+  if (provider === 'mongodb') {
+    const { getCommentsFromBackend } = await import('./mongoBackendAPI');
+    return await getCommentsFromBackend(poopId);
+  } else {
+    // 對於其他數據庫，使用 Firebase 的留言功能
+    const { getPoopComments: getPoopCommentsFromFirebase } = await import('./database');
+    return await getPoopCommentsFromFirebase(poopId);
+  }
+};
+
+export const deletePoopComment = async (commentId: string): Promise<void> => {
+  const provider = await getDatabaseProvider();
+  
+  console.log('🗑️ Deleting comment using provider:', provider);
+  
+  if (provider === 'mongodb') {
+    const { deleteCommentFromBackend } = await import('./mongoBackendAPI');
+    return await deleteCommentFromBackend(commentId);
+  } else {
+    // 對於其他數據庫，使用 Firebase 的留言功能
+    const { deletePoopComment: deletePoopCommentFromFirebase } = await import('./database');
+    return await deletePoopCommentFromFirebase(commentId);
+  }
+};
+
+export const addPoopLike = async (poopId: string, userId: string, userEmail: string, userName: string, userPicture?: string): Promise<string> => {
+  const provider = await getDatabaseProvider();
+  
+  console.log('👍 Adding like using provider:', provider);
+  
+  if (provider === 'mongodb') {
+    const { addLikeToBackend } = await import('./mongoBackendAPI');
+    return await addLikeToBackend(poopId, userId, userEmail, userName, userPicture);
+  } else {
+    // 對於其他數據庫，使用 Firebase 的按讚功能
+    const { addPoopLike: addPoopLikeToFirebase } = await import('./database');
+    return await addPoopLikeToFirebase(poopId, userId, userEmail, userName, userPicture);
+  }
+};
+
+export const removePoopLike = async (poopId: string, userId: string): Promise<void> => {
+  const provider = await getDatabaseProvider();
+  
+  console.log('👎 Removing like using provider:', provider);
+  
+  if (provider === 'mongodb') {
+    const { removeLikeFromBackend } = await import('./mongoBackendAPI');
+    return await removeLikeFromBackend(poopId, userId);
+  } else {
+    // 對於其他數據庫，使用 Firebase 的按讚功能
+    const { removePoopLike: removePoopLikeFromFirebase } = await import('./database');
+    return await removePoopLikeFromFirebase(poopId, userId);
+  }
+};
+
+export const subscribeToPoopInteractions = (poopId: string, callback: (data: { likes: any[], comments: any[] }) => void) => {
+  console.log('🔄 Setting up interactions subscription for poop:', poopId);
+  
+  // 獲取數據庫提供者並設置訂閱
+  getDatabaseProvider().then(provider => {
+    console.log('🔄 Using provider for interactions:', provider);
+    
+    if (provider === 'mongodb') {
+      import('./mongoBackendAPI').then(({ subscribeToPoopInteractionsInBackend }) => {
+        return subscribeToPoopInteractionsInBackend(poopId, callback);
+      });
+    } else {
+      // 對於其他數據庫，使用 Firebase 的互動功能
+      import('./database').then(({ subscribeToPoopInteractions: subscribeToPoopInteractionsInFirebase }) => {
+        return subscribeToPoopInteractionsInFirebase(poopId, callback);
+      });
+    }
+  });
+  
+  // 返回一個空的取消函數
+  return () => {
+    console.log('🔄 Unsubscribing from interactions for poop:', poopId);
+  };
 };
