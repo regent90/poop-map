@@ -36,7 +36,9 @@ export default async function handler(req, res) {
   }
 
   try {
+    console.log('🔄 Attempting MongoDB connection...');
     const client = await clientPromise;
+    console.log('✅ MongoDB connection successful');
     const db = client.db(process.env.MONGODB_DB_NAME || 'poopmap');
     const collection = db.collection('poops');
     
