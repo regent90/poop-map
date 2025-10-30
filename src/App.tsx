@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { UserProfile, Poop, Language, TranslationStrings, Friend, FriendRequest } from './types';
+import { initMobileViewportFix } from './utils/mobileViewport';
+import './styles/mobile-viewport.css';
 import { translations } from './constants';
 import { PoopMap } from './components/PoopMap';
 import { Header } from './components/Header';
@@ -157,6 +159,9 @@ const App: React.FC = () => {
   }, [useFirebase]);
 
   useEffect(() => {
+    // Initialize mobile viewport fix
+    const cleanupViewport = initMobileViewportFix();
+    
     // Load user from localStorage first
     const storedUser = localStorage.getItem('poopMapUser');
     if (storedUser) {
@@ -166,6 +171,9 @@ const App: React.FC = () => {
       // Check storage usage (monitoring only, no deletion)
       checkStorageUsage();
     }
+    
+    // Cleanup on unmount
+    return cleanupViewport;
   }, []);
 
   // Load user data when Firebase is ready or user changes
@@ -1050,21 +1058,23 @@ const App: React.FC = () => {
 
   // Main app for logged in users
   return (
-    <div className="relative h-screen w-screen">
+    <div className="mobile-viewport-container">
 
 
-      <Header
-        user={user}
-        onLogout={handleLogout}
-        currentLang={lang}
-        onLangChange={handleLanguageChange}
-        translations={t}
-        poops={poops}
-        onViewPoopDetails={handleViewPoopDetails}
-        onOpenFriends={() => setShowFriendsModal(true)}
-        friendsCount={friends.length}
-        onShowIconShowcase={() => setShowIconShowcase(true)}
-      />
+      <div className="mobile-header">
+        <Header
+          user={user}
+          onLogout={handleLogout}
+          currentLang={lang}
+          onLangChange={handleLanguageChange}
+          translations={t}
+          poops={poops}
+          onViewPoopDetails={handleViewPoopDetails}
+          onOpenFriends={() => setShowFriendsModal(true)}
+          friendsCount={friends.length}
+          onShowIconShowcase={() => setShowIconShowcase(true)}
+        />
+      </div>
 
       {!apiKey ? (
         <div className="h-full w-full flex items-center justify-center bg-red-100">
@@ -1077,19 +1087,21 @@ const App: React.FC = () => {
           </div>
         </div>
       ) : (
-        <Wrapper 
-          apiKey={apiKey} 
-          libraries={['marker']} 
-          render={render}
-          version="weekly"
-          region="TW"
-          language="zh-TW"
-        >
-          <PoopMap poops={getVisiblePoops()} onPoopClick={handlePoopClick} />
-        </Wrapper>
+        <div className="mobile-map-container">
+          <Wrapper 
+            apiKey={apiKey} 
+            libraries={['marker']} 
+            render={render}
+            version="weekly"
+            region="TW"
+            language="zh-TW"
+          >
+            <PoopMap poops={getVisiblePoops()} onPoopClick={handlePoopClick} />
+          </Wrapper>
+        </div>
       )}
 
-      <div className="absolute bottom-20 right-4 z-10 text-right">
+      <div className="absolute mobile-stats-container z-10 text-right">
         {error && <p className="bg-red-500 text-white p-2 rounded-md mb-2">{error}</p>}
         <div className="bg-white/80 backdrop-blur-sm p-3 rounded-lg shadow-lg">
           <div className="flex items-center justify-between mb-2">
@@ -1113,7 +1125,7 @@ const App: React.FC = () => {
         </div>
       </div>
 
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center space-y-2">
+      <div className="absolute mobile-bottom-button z-10 flex flex-col items-center space-y-2">
         <button
           onClick={addPoop}
           disabled={isDropping}
@@ -1131,8 +1143,6 @@ const App: React.FC = () => {
             </>
           )}
         </button>
-
-
       </div>
 
       {/* Poop Details Modal */}
@@ -1188,7 +1198,7 @@ const App: React.FC = () => {
       {/* Debug Toggle Button */}
       <button
         onClick={() => setShowDebugger(!showDebugger)}
-        className="fixed bottom-4 right-4 bg-gray-600 text-white p-2 rounded-full shadow-lg hover:bg-gray-700 z-40"
+        className="fixed mobile-bottom-right-button bg-gray-600 text-white p-2 rounded-full shadow-lg hover:bg-gray-700 z-40"
         title="數據庫調試器"
       >
         🔍

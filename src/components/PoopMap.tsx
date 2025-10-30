@@ -141,7 +141,7 @@ const MapComponent: React.FC<{
 
 
   return (
-    <div style={{ height: '100vh', width: '100%' }}>
+    <div style={{ height: 'calc(var(--vh, 1vh) * 100)', width: '100%' }}>
       <div ref={ref} style={{ height: '100%', width: '100%' }} />
       {/* Pass the map instance to child components */}
       {React.Children.map(children, (child) => {
