@@ -7,20 +7,43 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 // 創建 Supabase 客戶端
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// 檢查 Supabase 連接
+// 檢查 Supabase 連接 (優化版本，減少 API 調用)
+let connectionCheckCache: { result: boolean; timestamp: number } | null = null;
+const CONNECTION_CACHE_DURATION = 5 * 60 * 1000; // 5 分鐘緩存
+
 export const checkSupabaseConnection = async (): Promise<boolean> => {
+  // 使用緩存結果，避免頻繁檢查
+  if (connectionCheckCache && 
+      Date.now() - connectionCheckCache.timestamp < CONNECTION_CACHE_DURATION) {
+    console.log('✅ Using cached Supabase connection status:', connectionCheckCache.result);
+    return connectionCheckCache.result;
+  }
+
   try {
-    const { data, error } = await supabase.from('poops').select('count', { count: 'exact', head: true });
+    // 使用更輕量的查詢，只檢查表是否存在
+    const { error } = await supabase.from('poops').select('id').limit(1).single();
     
-    if (error) {
-      console.warn('🔴 Supabase connection test failed:', error.message);
-      return false;
+    const isConnected = !error || error.code !== 'PGRST116'; // PGRST116 = no rows returned
+    
+    // 緩存結果
+    connectionCheckCache = {
+      result: isConnected,
+      timestamp: Date.now()
+    };
+    
+    if (isConnected) {
+      console.log('✅ Supabase connection successful (cached for 5min)');
+    } else {
+      console.warn('🔴 Supabase connection test failed:', error?.message);
     }
     
-    console.log('✅ Supabase connection successful');
-    return true;
+    return isConnected;
   } catch (error) {
     console.warn('🔴 Supabase connection error:', error);
+    connectionCheckCache = {
+      result: false,
+      timestamp: Date.now()
+    };
     return false;
   }
 };

@@ -36,53 +36,92 @@ import { checkFirebaseConnection } from '../firebase';
 // 數據庫提供者類型
 type DatabaseProvider = 'supabase' | 'firebase' | 'localStorage';
 
-// 獲取當前數據庫提供者
+// 數據庫提供者緩存
+let databaseProviderCache: { provider: DatabaseProvider; timestamp: number } | null = null;
+const PROVIDER_CACHE_DURATION = 10 * 60 * 1000; // 10 分鐘緩存
+
+// 獲取當前數據庫提供者 (優化版本)
 const getDatabaseProvider = async (): Promise<DatabaseProvider> => {
+  // 使用緩存結果，避免頻繁檢查
+  if (databaseProviderCache && 
+      Date.now() - databaseProviderCache.timestamp < PROVIDER_CACHE_DURATION) {
+    return databaseProviderCache.provider;
+  }
+
   // 檢查環境變量配置
   const hasSupabaseConfig = !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY);
   const hasFirebaseConfig = !!(import.meta.env.VITE_FIREBASE_API_KEY && import.meta.env.VITE_FIREBASE_PROJECT_ID);
   
-  console.log('🔍 Database provider check:', {
+  console.log('🔍 Database provider check (cached for 10min):', {
     hasSupabaseConfig,
     hasFirebaseConfig,
     isOnline: navigator.onLine
   });
 
+  let selectedProvider: DatabaseProvider = 'localStorage';
+
   // 如果離線，使用 localStorage
   if (!navigator.onLine) {
     console.log('📱 Using localStorage (offline mode)');
-    return 'localStorage';
+    selectedProvider = 'localStorage';
   }
-
   // 優先使用 Supabase
-  if (hasSupabaseConfig) {
+  else if (hasSupabaseConfig) {
     try {
       const isSupabaseConnected = await checkSupabaseConnection();
       if (isSupabaseConnected) {
         console.log('✅ Using Supabase as database provider');
-        return 'supabase';
+        selectedProvider = 'supabase';
+      } else {
+        throw new Error('Supabase connection failed');
       }
     } catch (error) {
-      console.warn('⚠️ Supabase connection failed:', error);
+      console.warn('⚠️ Supabase connection failed, trying Firebase:', error);
+      
+      // 備選使用 Firebase
+      if (hasFirebaseConfig) {
+        try {
+          const isFirebaseConnected = await checkFirebaseConnection();
+          if (isFirebaseConnected) {
+            console.log('✅ Using Firebase as database provider');
+            selectedProvider = 'firebase';
+          } else {
+            selectedProvider = 'localStorage';
+          }
+        } catch (error) {
+          console.warn('⚠️ Firebase connection failed:', error);
+          selectedProvider = 'localStorage';
+        }
+      }
     }
   }
-
-  // 備選使用 Firebase
-  if (hasFirebaseConfig) {
+  // 如果沒有 Supabase，嘗試 Firebase
+  else if (hasFirebaseConfig) {
     try {
       const isFirebaseConnected = await checkFirebaseConnection();
       if (isFirebaseConnected) {
         console.log('✅ Using Firebase as database provider');
-        return 'firebase';
+        selectedProvider = 'firebase';
+      } else {
+        selectedProvider = 'localStorage';
       }
     } catch (error) {
       console.warn('⚠️ Firebase connection failed:', error);
+      selectedProvider = 'localStorage';
     }
   }
 
-  // 最後使用 localStorage
-  console.log('📱 Using localStorage as fallback');
-  return 'localStorage';
+  // 緩存結果
+  databaseProviderCache = {
+    provider: selectedProvider,
+    timestamp: Date.now()
+  };
+
+  if (selectedProvider === 'localStorage') {
+    console.log('📱 Using localStorage as fallback');
+  }
+
+  return selectedProvider;
 };
 
 // localStorage 操作函數

@@ -123,14 +123,25 @@ export const getFriendsPoopsFromSupabase = async (friendEmails: string[]): Promi
   }
 };
 
+// 公開便便查詢緩存
+let publicPoopsCache: { data: Poop[]; timestamp: number } | null = null;
+const PUBLIC_POOPS_CACHE_DURATION = 5 * 60 * 1000; // 5 分鐘緩存
+
 export const getPublicPoopsFromSupabase = async (): Promise<Poop[]> => {
+  // 使用緩存，減少 API 調用
+  if (publicPoopsCache && 
+      Date.now() - publicPoopsCache.timestamp < PUBLIC_POOPS_CACHE_DURATION) {
+    console.log(`✅ Using cached public poops (${publicPoopsCache.data.length} items)`);
+    return publicPoopsCache.data;
+  }
+
   try {
     const { data, error } = await supabase
       .from(TABLES.POOPS)
       .select('*')
       .eq('privacy', 'public')
       .order('timestamp', { ascending: false })
-      .limit(100); // 限制公開便便數量
+      .limit(50); // 減少限制數量從 100 到 50
 
     if (error) {
       console.error('❌ Error fetching public poops from Supabase:', error);
@@ -138,7 +149,14 @@ export const getPublicPoopsFromSupabase = async (): Promise<Poop[]> => {
     }
 
     const poops = data.map(convertSupabasePoopToPoop);
-    console.log(`✅ Fetched ${poops.length} public poops from Supabase`);
+    
+    // 緩存結果
+    publicPoopsCache = {
+      data: poops,
+      timestamp: Date.now()
+    };
+    
+    console.log(`✅ Fetched ${poops.length} public poops from Supabase (cached for 5min)`);
     return poops;
   } catch (error) {
     console.error('❌ Failed to fetch public poops from Supabase:', error);
@@ -275,9 +293,27 @@ export const updateFriendRequestStatusInSupabase = async (requestId: string, sta
   }
 };
 
-// 實時訂閱功能
+// 實時訂閱功能 (優化版本，減少 API 調用)
 export const subscribeToUserPoopsInSupabase = (userEmail: string, callback: (poops: Poop[]) => void) => {
   console.log(`🔄 Setting up real-time subscription for user poops: ${userEmail}`);
+  
+  // 防抖機制，避免頻繁查詢
+  let debounceTimer: NodeJS.Timeout | null = null;
+  
+  const debouncedCallback = async () => {
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+    }
+    
+    debounceTimer = setTimeout(async () => {
+      try {
+        const poops = await getUserPoopsFromSupabase(userEmail);
+        callback(poops);
+      } catch (error) {
+        console.error('❌ Error in real-time poops callback:', error);
+      }
+    }, 1000); // 1 秒防抖
+  };
   
   const subscription = supabase
     .channel(`user_poops_${userEmail}`)
@@ -289,20 +325,15 @@ export const subscribeToUserPoopsInSupabase = (userEmail: string, callback: (poo
         table: TABLES.POOPS,
         filter: `user_id=eq.${userEmail}`
       },
-      async () => {
-        // 當有變化時重新獲取數據
-        try {
-          const poops = await getUserPoopsFromSupabase(userEmail);
-          callback(poops);
-        } catch (error) {
-          console.error('❌ Error in real-time poops callback:', error);
-        }
-      }
+      debouncedCallback
     )
     .subscribe();
 
   return () => {
     console.log(`🔄 Unsubscribing from user poops: ${userEmail}`);
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+    }
     supabase.removeChannel(subscription);
   };
 };

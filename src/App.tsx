@@ -14,6 +14,7 @@ import { FriendsModal } from './components/FriendsModal';
 import { PoopIcon, SpinnerIcon } from './components/icons';
 import { IconShowcase } from './components/IconShowcase';
 import { DatabaseDebugger } from './components/DatabaseDebugger';
+import { ApiUsageMonitor } from './components/ApiUsageMonitor';
 import { Wrapper, Status } from "@googlemaps/react-wrapper";
 // Firebase imports
 import './firebase'; // Initialize Firebase
@@ -117,27 +118,19 @@ const App: React.FC = () => {
     checkDatabaseConfig();
   }, []);
 
-  // Monitor online status and database connections
+  // Monitor online status and database connections (優化版本)
   useEffect(() => {
     const handleOnline = async () => {
       setIsOnline(true);
       console.log('🌐 Network: Online');
       
-      // Test database connections when coming back online
+      // 減少連接檢查頻率，只在必要時檢查
       if (useFirebase) {
-        const currentProvider = await getCurrentDatabaseProvider();
-        console.log(`📊 Current database provider: ${currentProvider}`);
-        
-        // Test connections based on available configurations
-        if (import.meta.env.VITE_SUPABASE_URL) {
-          const isSupabaseConnected = await checkSupabaseConnection();
-          console.log(`🟢 Supabase: ${isSupabaseConnected ? 'Connected' : 'Blocked/Offline'}`);
-        }
-        
-        if (import.meta.env.VITE_FIREBASE_PROJECT_ID) {
-          const isFirebaseConnected = await checkFirebaseConnection();
-          console.log(`🔥 Firebase: ${isFirebaseConnected ? 'Connected' : 'Blocked/Offline'}`);
-        }
+        // 延遲檢查，避免頻繁 API 調用
+        setTimeout(async () => {
+          const currentProvider = await getCurrentDatabaseProvider();
+          console.log(`📊 Current database provider: ${currentProvider} (cached)`);
+        }, 2000); // 2 秒延遲
       }
     };
     
@@ -1194,6 +1187,9 @@ const App: React.FC = () => {
 
       {/* Database Debugger */}
       {showDebugger && <DatabaseDebugger />}
+
+      {/* API Usage Monitor (開發模式) */}
+      <ApiUsageMonitor />
 
       {/* Debug Toggle Button */}
       <button
