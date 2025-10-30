@@ -127,56 +127,17 @@ const getDatabaseProvider = async (): Promise<DatabaseProvider> => {
               console.warn('⚠️ Firebase connection failed:', error);
               selectedProvider = 'localStorage';
             }
-          }
-        }
-      }
-    }
-  }
-  // 如果沒有 MongoDB，嘗試 Supabase
-  else if (hasSupabaseConfig) {
-    try {
-      const isSupabaseConnected = await checkSupabaseConnection();
-      if (isSupabaseConnected) {
-        console.log('✅ Using Supabase as database provider');
-        selectedProvider = 'supabase';
-      } else {
-        throw new Error('Supabase connection failed');
-      }
-    } catch (error) {
-      console.warn('⚠️ Supabase connection failed, trying Firebase:', error);
-      
-      // 備選使用 Firebase
-      if (hasFirebaseConfig) {
-        try {
-          const isFirebaseConnected = await checkFirebaseConnection();
-          if (isFirebaseConnected) {
-            console.log('✅ Using Firebase as database provider');
-            selectedProvider = 'firebase';
           } else {
             selectedProvider = 'localStorage';
           }
-        } catch (error) {
-          console.warn('⚠️ Firebase connection failed:', error);
-          selectedProvider = 'localStorage';
         }
-      }
-    }
-  }
-  // 如果只有 Firebase，使用 Firebase
-  else if (hasFirebaseConfig) {
-    try {
-      const isFirebaseConnected = await checkFirebaseConnection();
-      if (isFirebaseConnected) {
-        console.log('✅ Using Firebase as database provider');
-        selectedProvider = 'firebase';
       } else {
         selectedProvider = 'localStorage';
       }
-    } catch (error) {
-      console.warn('⚠️ Firebase connection failed:', error);
-      selectedProvider = 'localStorage';
     }
   }
+      console.warn('⚠️ Supabase connection failed, trying Firebase:', error);
+
 
   // 緩存結果
   databaseProviderCache = {
