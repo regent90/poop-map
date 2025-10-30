@@ -13,14 +13,7 @@ export const MongoMigrationTool: React.FC = () => {
     setMigrationStatus('檢查 MongoDB 後端 API 連接...');
 
     try {
-      // 檢查 MongoDB 後端 API 配置
-      const mongoUri = import.meta.env.VITE_MONGODB_URI;
-      
-      if (!mongoUri) {
-        throw new Error('MongoDB URI 配置不完整');
-      }
-
-      // 測試後端 API 連接
+      // 直接測試後端 API 連接（不需要檢查前端環境變數）
       const isConnected = await checkMongoBackendConnection();
       
       if (!isConnected) {
@@ -42,13 +35,6 @@ export const MongoMigrationTool: React.FC = () => {
     setMigrationResults([]);
 
     try {
-      // 檢查 MongoDB 後端 API 配置
-      const mongoUri = import.meta.env.VITE_MONGODB_URI;
-      
-      if (!mongoUri) {
-        throw new Error('MongoDB URI 配置不完整');
-      }
-
       // 測試後端 API 連接
       const isConnected = await checkMongoBackendConnection();
       
