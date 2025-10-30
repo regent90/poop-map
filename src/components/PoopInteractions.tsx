@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
+import { useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import { Id } from "../../convex/_generated/dataModel";
 import { Poop, UserProfile, TranslationStrings, PoopLike, PoopComment } from '../types';
 import { 
   addPoopLike,
   removePoopLike,
   addPoopComment, 
-  deletePoopComment,
-  subscribeToPoopInteractions 
+  deletePoopComment
 } from '../services/unifiedDatabase';
 
 interface PoopInteractionsProps {
@@ -21,34 +23,29 @@ export const PoopInteractions: React.FC<PoopInteractionsProps> = ({
   translations: t,
   isVisible
 }) => {
-  const [likes, setLikes] = useState<PoopLike[]>([]);
-  const [comments, setComments] = useState<PoopComment[]>([]);
+  // 使用 Convex 即時查詢
+  const likes = useQuery(api.interactions.getLikes, 
+    isVisible ? { poopId: poop.id as Id<"poops"> } : "skip"
+  ) || [];
+  
+  const comments = useQuery(api.interactions.getComments, 
+    isVisible ? { poopId: poop.id as Id<"poops"> } : "skip"
+  ) || [];
+
   const [newComment, setNewComment] = useState('');
-  const [isLiked, setIsLiked] = useState(false);
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [isTogglingLike, setIsTogglingLike] = useState(false);
 
   // 檢查當前用戶是否已按讚
+  const isLiked = currentUser?.email ? 
+    likes.some(like => like.userEmail === currentUser.email) : false;
+
+  // 調試日誌
   useEffect(() => {
-    if (currentUser?.email) {
-      const userLike = likes.find(like => like.userEmail === currentUser.email);
-      setIsLiked(!!userLike);
+    if (isVisible && poop.id) {
+      console.log(`📊 Convex real-time data for poop ${poop.id}: ${likes.length} likes, ${comments.length} comments`);
     }
-  }, [likes, currentUser?.email]);
-
-  // 設置實時監聽
-  useEffect(() => {
-    if (!poop.id || !isVisible) return;
-
-    console.log('🔄 Setting up interactions listener for poop:', poop.id);
-    const unsubscribe = subscribeToPoopInteractions(poop.id, ({ likes, comments }) => {
-      console.log(`📊 Received ${likes.length} likes and ${comments.length} comments for poop ${poop.id}`);
-      setLikes(likes);
-      setComments(comments);
-    });
-
-    return unsubscribe;
-  }, [poop.id, isVisible]);
+  }, [likes, comments, poop.id, isVisible]);
 
   // 處理按讚/取消讚
   const handleToggleLike = async () => {

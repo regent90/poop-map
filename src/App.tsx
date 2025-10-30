@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { ConvexProvider, ConvexReactClient } from "convex/react";
 import { UserProfile, Poop, Language, TranslationStrings, Friend, FriendRequest } from './types';
 import { initMobileViewportFix } from './utils/mobileViewport';
 import './styles/mobile-viewport.css';
@@ -1246,4 +1247,16 @@ const App: React.FC = () => {
   );
 };
 
-export default App;
+// Convex 客戶端
+const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL!);
+
+// 包裝組件提供 Convex Provider
+const AppWithConvex: React.FC = () => {
+  return (
+    <ConvexProvider client={convex}>
+      <App />
+    </ConvexProvider>
+  );
+};
+
+export default AppWithConvex;
