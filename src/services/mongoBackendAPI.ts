@@ -41,8 +41,28 @@ export const checkMongoBackendConnection = async (): Promise<boolean> => {
   }
 
   try {
-    // 嘗試獲取公開便便來測試連接
-    await callAPI('/poops?privacy=public');
+    // 嘗試調用測試 API 來檢查連接
+    const url = API_BASE_URL ? `${API_BASE_URL}/test` : `/api/test`;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`API test failed: ${response.status}`);
+    }
+
+    const result = await response.json();
+    
+    // 檢查是否有 MongoDB URI 配置
+    const hasMongoConfig = result.environment?.hasMongoUri;
+    
+    if (!hasMongoConfig) {
+      throw new Error('MongoDB URI not configured in backend');
+    }
     
     connectionCheckCache = {
       result: true,

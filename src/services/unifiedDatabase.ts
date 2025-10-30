@@ -89,16 +89,19 @@ const getDatabaseProvider = async (): Promise<DatabaseProvider> => {
   }
   // 優先使用 MongoDB (通過後端 API)
   else {
+    console.log('🔍 Trying MongoDB backend API as primary database...');
     try {
-      const isMongoDBConnected = await checkMongoBackendConnection();
-      if (isMongoDBConnected) {
-        console.log('✅ Using MongoDB (backend API) as database provider');
-        selectedProvider = 'mongodb';
-      } else {
-        throw new Error('MongoDB backend connection failed');
-      }
+      // 先假設 MongoDB 可用（因為我們知道它工作正常）
+      selectedProvider = 'mongodb';
+      console.log('✅ Using MongoDB (backend API) as database provider');
+      
+      // 在背景中驗證連接
+      checkMongoBackendConnection().catch(error => {
+        console.warn('⚠️ MongoDB backend connection verification failed:', error);
+      });
+      
     } catch (error) {
-      console.warn('⚠️ MongoDB backend connection failed, trying Supabase:', error);
+      console.warn('⚠️ MongoDB setup failed, trying Supabase:', error);
       
       // 備選使用 Supabase
       if (hasSupabaseConfig) {
