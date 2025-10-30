@@ -30,6 +30,29 @@ import {
   subscribeToFriendRequestsInSupabase
 } from './supabaseDatabase';
 
+// Convex 服務 (新的主要選擇)
+import {
+  savePoopToConvex,
+  getUserPoopsFromConvex,
+  getFriendsPoopsFromConvex,
+  getPublicPoopsFromConvex,
+  saveFriendToConvex,
+  getUserFriendsFromConvex,
+  removeFriendFromConvex,
+  sendFriendRequestToConvex,
+  getUserFriendRequestsFromConvex,
+  updateFriendRequestStatusInConvex,
+  subscribeToUserPoopsInConvex,
+  subscribeToFriendRequestsInConvex,
+  addCommentToConvex,
+  getCommentsFromConvex,
+  deleteCommentFromConvex,
+  addLikeToConvex,
+  getLikesFromConvex,
+  removeLikeFromConvex,
+  subscribeToPoopInteractionsInConvex
+} from './convexDatabase';
+
 // Firebase 服務 (作為備選)
 import {
   savePoopToCloud as savePoopToFirebase,
@@ -48,10 +71,11 @@ import {
 import { checkMongoBackendConnection } from './mongoBackendAPI';
 import { checkSupabaseConnection } from '../supabase';
 import { checkFirebaseConnection } from '../firebase';
+import { checkConvexConnection } from './convexDatabase';
 import { error } from 'console';
 
 // 數據庫提供者類型
-type DatabaseProvider = 'mongodb' | 'supabase' | 'firebase' | 'localStorage';
+type DatabaseProvider = 'convex' | 'mongodb' | 'supabase' | 'firebase' | 'localStorage';
 
 // 數據庫提供者緩存
 let databaseProviderCache: { provider: DatabaseProvider; timestamp: number } | null = null;
@@ -73,10 +97,12 @@ const getDatabaseProvider = async (): Promise<DatabaseProvider> => {
   }
 
   // 檢查環境變量配置
+  const hasConvexConfig = !!(import.meta.env.VITE_CONVEX_URL);
   const hasSupabaseConfig = !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY);
   const hasFirebaseConfig = !!(import.meta.env.VITE_FIREBASE_API_KEY && import.meta.env.VITE_FIREBASE_PROJECT_ID);
   
   console.log('🔍 Database provider check (cached for 10min):', {
+    hasConvexConfig,
     hasSupabaseConfig,
     hasFirebaseConfig,
     isOnline: navigator.onLine,
@@ -90,9 +116,18 @@ const getDatabaseProvider = async (): Promise<DatabaseProvider> => {
     console.log('📱 Using localStorage (offline mode)');
     selectedProvider = 'localStorage';
   }
-  // 使用 MongoDB 作為主要資料庫（已修復連接問題）
+  // 優先使用 Convex（最佳選擇）
+  else if (hasConvexConfig) {
+    console.log('🚀 Using Convex as primary database (best choice!)');
+    selectedProvider = 'convex';
+  }
+  // 備選 Supabase
+  else if (hasSupabaseConfig) {
+    console.log('🔵 Using Supabase as backup database');
+    selectedProvider = 'supabase';
+  }
   else {
-    console.log('🍃 Using MongoDB as primary database (connection fixed)');
+    console.log('🍃 Using MongoDB as fallback database');
     selectedProvider = 'mongodb';
   }
 
@@ -140,6 +175,11 @@ export const savePoopToCloud = async (poop: Poop): Promise<string> => {
   
   try {
     switch (provider) {
+      case 'convex':
+        console.log('🚀 Saving to Convex...');
+        const convexId = await savePoopToConvex(poop);
+        console.log('✅ Poop saved to Convex:', convexId);
+        return convexId;
       case 'mongodb':
         console.log('🍃 Saving to MongoDB...');
         const mongoId = await savePoopToMongoDB(poop);
@@ -179,6 +219,11 @@ export const getUserPoops = async (userEmail: string): Promise<Poop[]> => {
   
   try {
     switch (provider) {
+      case 'convex':
+        console.log('🚀 Getting from Convex...');
+        const convexPoops = await getUserPoopsFromConvex(userEmail);
+        console.log(`✅ Got ${convexPoops.length} poops from Convex`);
+        return convexPoops;
       case 'mongodb':
         console.log('🍃 Getting from MongoDB...');
         const mongoPoops = await getUserPoopsFromMongoDB(userEmail);
@@ -536,17 +581,35 @@ export const subscribeToFriendRequests = (userEmail: string, callback: (requests
 export const getCurrentDatabaseProvider = async (): Promise<DatabaseProvider> => {
   return await getDatabaseProvider();
 };
-// 留言和按讚功能（僅支持 MongoDB - 簡化版本）
+// 留言和按讚功能
 export const addPoopComment = async (poopId: string, userId: string, userEmail: string, userName: string, content: string, userPicture?: string): Promise<string> => {
-  console.log('💬 Adding comment to MongoDB');
-  const { addCommentToBackend } = await import('./mongoBackendAPI');
-  return await addCommentToBackend(poopId, userId, userEmail, userName, content, userPicture);
+  const provider = await getDatabaseProvider();
+  
+  switch (provider) {
+    case 'convex':
+      console.log('💬 Adding comment to Convex');
+      return await addCommentToConvex(poopId, userId, userEmail, userName, content, userPicture);
+    case 'mongodb':
+    default:
+      console.log('💬 Adding comment to MongoDB');
+      const { addCommentToBackend } = await import('./mongoBackendAPI');
+      return await addCommentToBackend(poopId, userId, userEmail, userName, content, userPicture);
+  }
 };
 
 export const getPoopComments = async (poopId: string) => {
-  console.log('📖 Getting comments from MongoDB');
-  const { getCommentsFromBackend } = await import('./mongoBackendAPI');
-  return await getCommentsFromBackend(poopId);
+  const provider = await getDatabaseProvider();
+  
+  switch (provider) {
+    case 'convex':
+      console.log('📖 Getting comments from Convex');
+      return await getCommentsFromConvex(poopId);
+    case 'mongodb':
+    default:
+      console.log('📖 Getting comments from MongoDB');
+      const { getCommentsFromBackend } = await import('./mongoBackendAPI');
+      return await getCommentsFromBackend(poopId);
+  }
 };
 
 export const deletePoopComment = async (commentId: string): Promise<void> => {
