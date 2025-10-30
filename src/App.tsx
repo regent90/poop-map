@@ -35,7 +35,8 @@ import {
   subscribeToUserPoops,
   subscribeToFriendRequests,
   getCurrentDatabaseProvider,
-  removeFriend
+  removeFriend,
+  savePoopToCloud
 } from './services/unifiedDatabase';
 
 const App: React.FC = () => {
@@ -436,11 +437,70 @@ const App: React.FC = () => {
     );
   };
 
-  const handleSavePoopDetails = (details: Partial<Poop>) => {
+  // 圖片壓縮函數
+  const compressImage = (file: string, maxSizeKB: number = 800): Promise<string> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d')!;
+      const img = new Image();
+      
+      img.onload = () => {
+        // 計算新尺寸
+        let { width, height } = img;
+        const maxDimension = 1200; // 最大尺寸
+        
+        if (width > height && width > maxDimension) {
+          height = (height * maxDimension) / width;
+          width = maxDimension;
+        } else if (height > maxDimension) {
+          width = (width * maxDimension) / height;
+          height = maxDimension;
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        
+        // 繪製並壓縮
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // 嘗試不同的質量直到文件大小合適
+        let quality = 0.8;
+        let compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+        
+        while (compressedDataUrl.length > maxSizeKB * 1024 * 1.37 && quality > 0.1) { // 1.37 是 base64 的開銷
+          quality -= 0.1;
+          compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+        }
+        
+        console.log(`📸 Image compressed: ${(file.length / 1024).toFixed(1)}KB → ${(compressedDataUrl.length / 1024).toFixed(1)}KB (quality: ${quality})`);
+        resolve(compressedDataUrl);
+      };
+      
+      img.src = file;
+    });
+  };
+
+  const handleSavePoopDetails = async (details: Partial<Poop>) => {
     if (!pendingPoopData || !user?.email) return;
 
-    console.log('Saving poop details:', details);
+    console.log('Saving poop details:', {
+      ...details,
+      photo: details.photo ? `${(details.photo.length / 1024).toFixed(1)}KB` : 'none'
+    });
     console.log('Current user:', user.email);
+
+    // 壓縮圖片（如果有的話）
+    let compressedPhoto = details.photo;
+    if (details.photo && details.photo.length > 800 * 1024) { // 如果圖片大於 800KB
+      console.log('📸 Compressing image...');
+      try {
+        compressedPhoto = await compressImage(details.photo, 800);
+      } catch (error) {
+        console.error('❌ Image compression failed:', error);
+        alert('圖片壓縮失敗，將不包含圖片保存');
+        compressedPhoto = undefined;
+      }
+    }
 
     const newPoop: Poop = {
       id: new Date().toISOString(),
@@ -451,15 +511,35 @@ const App: React.FC = () => {
       privacy: 'private', // Default privacy
       userId: user.email,
       ...details,
+      photo: compressedPhoto, // 使用壓縮後的圖片
     };
 
-    console.log('New poop created:', newPoop);
+    console.log('New poop created:', {
+      ...newPoop,
+      photo: newPoop.photo ? `${(newPoop.photo.length / 1024).toFixed(1)}KB` : 'none'
+    });
 
     const updatedPoops = [...poops, newPoop];
     console.log('Updated poops array:', updatedPoops.length);
 
     setPoops(updatedPoops);
-    savePoops(updatedPoops);
+    
+    // 保存到 localStorage (如果空間足夠)
+    try {
+      localStorage.setItem(`poops_${user.email}`, JSON.stringify(updatedPoops));
+      console.log(`💾 Saved ${updatedPoops.length} poops to localStorage for ${user.email}`);
+    } catch (error) {
+      console.warn('❌ localStorage full, skipping local save');
+    }
+
+    // 保存到雲端資料庫
+    try {
+      const cloudId = await savePoopToCloud(newPoop);
+      console.log('☁️ Saved poop to cloud with ID:', cloudId);
+    } catch (error) {
+      console.error('❌ Failed to save to cloud:', error);
+      alert('保存到雲端失敗，但已保存到本地');
+    }
 
     // Also add to all poops for visibility filtering
     const updatedAllPoops = [...allPoops, newPoop];
