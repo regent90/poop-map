@@ -3,9 +3,5 @@
     "api/**/*.js": {
       "maxDuration": 30
     }
-  },
-  "env": {
-    "MONGODB_URI": "@mongodb-uri",
-    "MONGODB_DB_NAME": "poopmap"
   }
 }
