@@ -689,12 +689,24 @@ export const removePoopLike = async (poopId: string, userId: string): Promise<vo
 };
 
 export const subscribeToPoopInteractions = (poopId: string, callback: (data: { likes: any[], comments: any[] }) => void) => {
-  console.log('🔄 Setting up MongoDB interactions subscription for poop:', poopId);
-  import('./mongoBackendAPI').then(({ subscribeToPoopInteractionsInBackend }) => {
-    return subscribeToPoopInteractionsInBackend(poopId, callback);
+  getDatabaseProvider().then(provider => {
+    switch (provider) {
+      case 'convex':
+        console.log('🚀 Setting up Convex interactions subscription for poop:', poopId);
+        return subscribeToPoopInteractionsInConvex(poopId, callback);
+      case 'mongodb':
+        console.log('🔄 Setting up MongoDB interactions subscription for poop:', poopId);
+        import('./mongoBackendAPI').then(({ subscribeToPoopInteractionsInBackend }) => {
+          return subscribeToPoopInteractionsInBackend(poopId, callback);
+        });
+        break;
+      default:
+        console.log('📱 No real-time subscription available for this provider');
+        return () => {};
+    }
   });
   
   return () => {
-    console.log('🔄 Unsubscribing from MongoDB interactions for poop:', poopId);
+    console.log('🔄 Unsubscribing from interactions for poop:', poopId);
   };
 };

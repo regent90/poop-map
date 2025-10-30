@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Poop, UserProfile, TranslationStrings, PoopLike, PoopComment } from '../types';
 import { 
-  togglePoopLike, 
+  addPoopLike,
+  removePoopLike,
   addPoopComment, 
   deletePoopComment,
   subscribeToPoopInteractions 
-} from '../services/database';
+} from '../services/unifiedDatabase';
 
 interface PoopInteractionsProps {
   poop: Poop;
@@ -55,15 +56,23 @@ export const PoopInteractions: React.FC<PoopInteractionsProps> = ({
 
     setIsTogglingLike(true);
     try {
-      const newLikedState = await togglePoopLike(
-        poop.id,
-        currentUser.email,
-        currentUser.email,
-        currentUser.name || 'Unknown',
-        currentUser.picture
-      );
+      const isCurrentlyLiked = likes.some(like => like.userEmail === currentUser.email);
       
-      console.log(`👍 Like toggled for poop ${poop.id}: ${newLikedState ? 'liked' : 'unliked'}`);
+      if (isCurrentlyLiked) {
+        // 移除按讚
+        await removePoopLike(poop.id, currentUser.email);
+        console.log(`👎 Like removed for poop ${poop.id}`);
+      } else {
+        // 添加按讚
+        await addPoopLike(
+          poop.id,
+          currentUser.email,
+          currentUser.email,
+          currentUser.name || 'Unknown',
+          currentUser.picture
+        );
+        console.log(`👍 Like added for poop ${poop.id}`);
+      }
     } catch (error) {
       console.error('❌ Failed to toggle like:', error);
       alert('Failed to update like. Please try again.');
