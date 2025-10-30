@@ -1,4 +1,4 @@
-const { MongoClient } = require('mongodb');
+import { MongoClient } from 'mongodb';
 
 const uri = process.env.MONGODB_URI;
 const options = {};
@@ -21,7 +21,7 @@ if (process.env.NODE_ENV === 'development') {
   clientPromise = client.connect();
 }
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   // 設置 CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
