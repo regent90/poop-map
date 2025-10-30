@@ -45,7 +45,7 @@ import {
   subscribeToFriendRequests as subscribeToFriendRequestsInFirebase
 } from './database';
 
-import { checkMongoDBConnection } from '../mongodb';
+import { checkMongoBackendConnection } from './mongoBackendAPI';
 import { checkSupabaseConnection } from '../supabase';
 import { checkFirebaseConnection } from '../firebase';
 
@@ -83,18 +83,18 @@ const getDatabaseProvider = async (): Promise<DatabaseProvider> => {
     console.log('📱 Using localStorage (offline mode)');
     selectedProvider = 'localStorage';
   }
-  // 優先使用 MongoDB Atlas
+  // 優先使用 MongoDB (通過後端 API)
   else if (hasMongoDBConfig) {
     try {
-      const isMongoDBConnected = await checkMongoDBConnection();
+      const isMongoDBConnected = await checkMongoBackendConnection();
       if (isMongoDBConnected) {
-        console.log('✅ Using MongoDB Atlas as database provider');
+        console.log('✅ Using MongoDB (backend API) as database provider');
         selectedProvider = 'mongodb';
       } else {
-        throw new Error('MongoDB connection failed');
+        throw new Error('MongoDB backend connection failed');
       }
     } catch (error) {
-      console.warn('⚠️ MongoDB connection failed, trying Supabase:', error);
+      console.warn('⚠️ MongoDB backend connection failed, trying Supabase:', error);
       
       // 備選使用 Supabase
       if (hasSupabaseConfig) {
