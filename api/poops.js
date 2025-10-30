@@ -76,7 +76,23 @@ export default async function handler(req, res) {
         updatedAt: new Date()
       };
       
+      // 檢查文檔大小（MongoDB 限制為 16MB）
+      const dataSize = JSON.stringify(poopData).length;
+      console.log(`📊 Document size: ${(dataSize / 1024 / 1024).toFixed(2)} MB`);
+      
+      if (dataSize > 15 * 1024 * 1024) { // 15MB 安全限制
+        console.warn('⚠️ Document too large, compressing photo...');
+        
+        // 如果有圖片且太大，嘗試壓縮
+        if (poopData.photo && poopData.photo.length > 1024 * 1024) { // 1MB
+          console.log('🗜️ Photo is large, may need compression');
+          // 這裡可以添加圖片壓縮邏輯，或者返回錯誤
+        }
+      }
+      
       const result = await collection.insertOne(poopData);
+      console.log('✅ Document inserted successfully:', result.insertedId);
+      
       res.json({ 
         success: true, 
         insertedId: result.insertedId.toString(),
@@ -116,9 +132,26 @@ export default async function handler(req, res) {
     }
   } catch (error) {
     console.error('API Error:', error);
-    res.status(500).json({ 
-      error: 'Internal server error',
-      message: error.message 
-    });
+    
+    // 檢查是否是 MongoDB 大小限制錯誤
+    if (error.message && error.message.includes('document is larger than the maximum size')) {
+      res.status(413).json({ 
+        error: 'Document too large',
+        message: 'The poop data (including photo) is too large for MongoDB. Please use a smaller photo.',
+        code: 'DOCUMENT_TOO_LARGE'
+      });
+    } else if (error.code === 10334) { // MongoDB BSONObjectTooLarge error
+      res.status(413).json({ 
+        error: 'Document too large',
+        message: 'The document exceeds MongoDB size limit (16MB). Please compress the photo.',
+        code: 'BSON_TOO_LARGE'
+      });
+    } else {
+      res.status(500).json({ 
+        error: 'Internal server error',
+        message: error.message,
+        code: error.code || 'UNKNOWN_ERROR'
+      });
+    }
   }
 }

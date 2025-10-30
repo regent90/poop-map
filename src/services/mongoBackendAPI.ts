@@ -84,6 +84,16 @@ export const checkMongoBackendConnection = async (): Promise<boolean> => {
 // 便便相關操作
 export const savePoopToBackend = async (poop: Poop): Promise<string> => {
   try {
+    // 檢查圖片大小
+    if (poop.photo) {
+      const photoSize = poop.photo.length;
+      console.log(`📸 Photo size: ${(photoSize / 1024).toFixed(1)} KB`);
+      
+      if (photoSize > 5 * 1024 * 1024) { // 5MB 警告
+        console.warn('⚠️ Large photo detected, may cause MongoDB size limit issues');
+      }
+    }
+
     const result = await callAPI('/poops', {
       method: 'POST',
       body: JSON.stringify(poop)
@@ -91,8 +101,19 @@ export const savePoopToBackend = async (poop: Poop): Promise<string> => {
 
     console.log('✅ Poop saved to MongoDB backend:', result.insertedId);
     return result.insertedId;
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Failed to save poop to MongoDB backend:', error);
+    
+    // 檢查是否是大小限制錯誤
+    if (error.message && (
+      error.message.includes('413') || 
+      error.message.includes('too large') ||
+      error.message.includes('DOCUMENT_TOO_LARGE') ||
+      error.message.includes('BSON_TOO_LARGE')
+    )) {
+      throw new Error('圖片太大無法存儲到 MongoDB。請使用較小的圖片或壓縮後再試。');
+    }
+    
     throw error;
   }
 };
