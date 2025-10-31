@@ -1,6 +1,6 @@
 import { ConvexReactClient } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { Poop, Friend, FriendRequest } from '../types';
+import { Poop, Friend, FriendRequest, UserInventory, PoopItem, PoopAttack } from '../types';
 import { Id } from "../../convex/_generated/dataModel";
 
 // 創建 Convex 客戶端
@@ -323,4 +323,126 @@ export const subscribeToPoopInteractionsInConvex = (poopId: string, callback: (d
   return () => {
     console.log(`🔄 Unsubscribing from Convex poop interactions: ${poopId}`);
   };
+};
+// 
+道具系統相關操作
+export const getUserInventoryFromConvex = async (userId: string): Promise<UserInventory> => {
+  try {
+    const inventory = await convex.query(api.poopItems.getUserInventory, { userId });
+    console.log(`✅ Fetched inventory from Convex for user ${userId}: ${inventory.items.length} items`);
+    return inventory;
+  } catch (error) {
+    console.error('❌ Failed to get inventory from Convex:', error);
+    throw error;
+  }
+};
+
+export const addItemToInventoryInConvex = async (userId: string, item: PoopItem): Promise<string> => {
+  try {
+    const inventoryId = await convex.mutation(api.poopItems.addItemToInventory, { userId, item });
+    console.log(`✅ Added item ${item.name} to Convex inventory for user ${userId}`);
+    return inventoryId;
+  } catch (error) {
+    console.error('❌ Failed to add item to Convex inventory:', error);
+    throw error;
+  }
+};
+
+export const useItemFromConvex = async (userId: string, itemId: string): Promise<PoopItem> => {
+  try {
+    const item = await convex.mutation(api.poopItems.useItem, { userId, itemId });
+    console.log(`✅ Used item ${item.name} from Convex inventory for user ${userId}`);
+    return item;
+  } catch (error) {
+    console.error('❌ Failed to use item from Convex inventory:', error);
+    throw error;
+  }
+};
+
+export const createAttackInConvex = async (attack: Omit<PoopAttack, 'id' | 'viewed'>): Promise<string> => {
+  try {
+    const attackId = await convex.mutation(api.poopItems.createAttack, {
+      fromUserId: attack.fromUserId,
+      fromUserName: attack.fromUserName,
+      fromUserEmail: attack.fromUserEmail,
+      fromUserPicture: attack.fromUserPicture,
+      toUserId: attack.toUserId,
+      toUserEmail: attack.toUserEmail,
+      itemUsed: attack.itemUsed,
+      message: attack.message,
+      timestamp: attack.timestamp,
+    });
+    console.log(`✅ Created attack in Convex from ${attack.fromUserEmail} to ${attack.toUserEmail}`);
+    return attackId;
+  } catch (error) {
+    console.error('❌ Failed to create attack in Convex:', error);
+    throw error;
+  }
+};
+
+export const getUserAttacksFromConvex = async (userId: string): Promise<PoopAttack[]> => {
+  try {
+    const attacks = await convex.query(api.poopItems.getUserAttacks, { userId });
+    console.log(`✅ Fetched ${attacks.length} attacks from Convex for user ${userId}`);
+    return attacks.map(attack => ({
+      id: attack._id,
+      fromUserId: attack.fromUserId,
+      fromUserName: attack.fromUserName,
+      fromUserEmail: attack.fromUserEmail,
+      fromUserPicture: attack.fromUserPicture,
+      toUserId: attack.toUserId,
+      toUserEmail: attack.toUserEmail,
+      itemUsed: attack.itemUsed,
+      message: attack.message,
+      timestamp: attack.timestamp,
+      viewed: attack.viewed,
+    }));
+  } catch (error) {
+    console.error('❌ Failed to get attacks from Convex:', error);
+    throw error;
+  }
+};
+
+export const getUnviewedAttacksFromConvex = async (userId: string): Promise<PoopAttack[]> => {
+  try {
+    const attacks = await convex.query(api.poopItems.getUnviewedAttacks, { userId });
+    console.log(`✅ Fetched ${attacks.length} unviewed attacks from Convex for user ${userId}`);
+    return attacks.map(attack => ({
+      id: attack._id,
+      fromUserId: attack.fromUserId,
+      fromUserName: attack.fromUserName,
+      fromUserEmail: attack.fromUserEmail,
+      fromUserPicture: attack.fromUserPicture,
+      toUserId: attack.toUserId,
+      toUserEmail: attack.toUserEmail,
+      itemUsed: attack.itemUsed,
+      message: attack.message,
+      timestamp: attack.timestamp,
+      viewed: attack.viewed,
+    }));
+  } catch (error) {
+    console.error('❌ Failed to get unviewed attacks from Convex:', error);
+    throw error;
+  }
+};
+
+export const markAttackAsViewedInConvex = async (attackId: string): Promise<void> => {
+  try {
+    await convex.mutation(api.poopItems.markAttackAsViewed, { attackId: attackId as any });
+    console.log(`✅ Marked attack ${attackId} as viewed in Convex`);
+  } catch (error) {
+    console.error('❌ Failed to mark attack as viewed in Convex:', error);
+    throw error;
+  }
+};
+
+export const cleanupOldAttacksInConvex = async (userId: string): Promise<number> => {
+  try {
+    const cleanedCount = await convex.mutation(api.poopItems.cleanupOldAttacks, { userId });
+    console.log(`✅ Cleaned up ${cleanedCount} old attacks in Convex for user ${userId}`);
+    return cleanedCount;
+  } catch (error) {
+    console.error('❌ Failed to cleanup old attacks in Convex:', error);
+    throw error;
+  }
 };

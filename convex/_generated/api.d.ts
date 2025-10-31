@@ -10,6 +10,7 @@
 
 import type * as friends from "../friends.js";
 import type * as interactions from "../interactions.js";
+import type * as poopItems from "../poopItems.js";
 import type * as poops from "../poops.js";
 
 import type {
@@ -29,6 +30,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   friends: typeof friends;
   interactions: typeof interactions;
+  poopItems: typeof poopItems;
   poops: typeof poops;
 }>;
 declare const fullApiWithMounts: typeof fullApi;

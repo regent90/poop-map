@@ -1,4 +1,4 @@
-import { Poop, Friend, FriendRequest } from '../types';
+import { Poop, Friend, FriendRequest, UserInventory, PoopItem, PoopAttack } from '../types';
 
 // MongoDB 服務 (主要)
 import {
@@ -48,6 +48,14 @@ import {
   getCommentsFromConvex,
   deleteCommentFromConvex,
   addLikeToConvex,
+  getUserInventoryFromConvex,
+  addItemToInventoryInConvex,
+  useItemFromConvex,
+  createAttackInConvex,
+  getUserAttacksFromConvex,
+  getUnviewedAttacksFromConvex,
+  markAttackAsViewedInConvex,
+  cleanupOldAttacksInConvex,
   getLikesFromConvex,
   removeLikeFromConvex,
   subscribeToPoopInteractionsInConvex
@@ -725,4 +733,349 @@ export const subscribeToPoopInteractions = (poopId: string, callback: (data: { l
   return () => {
     console.log('🔄 Unsubscribing from interactions for poop:', poopId);
   };
+};// 道具
+系統相關操作
+export const getUserInventory = async (userId: string): Promise<UserInventory> => {
+  const provider = await getDatabaseProvider();
+  
+  console.log('💾 Getting user inventory using provider:', provider);
+  
+  try {
+    switch (provider) {
+      case 'convex':
+        console.log('🚀 Getting inventory from Convex...');
+        return await getUserInventoryFromConvex(userId);
+      case 'mongodb':
+        console.log('🍃 Getting inventory from MongoDB...');
+        // TODO: 實現 MongoDB 道具系統
+        throw new Error('MongoDB inventory not implemented yet');
+      case 'supabase':
+        console.log('🔵 Getting inventory from Supabase...');
+        // TODO: 實現 Supabase 道具系統
+        throw new Error('Supabase inventory not implemented yet');
+      case 'firebase':
+        console.log('🟠 Getting inventory from Firebase...');
+        // TODO: 實現 Firebase 道具系統
+        throw new Error('Firebase inventory not implemented yet');
+      case 'localStorage':
+      default:
+        console.log('📱 Getting inventory from localStorage...');
+        const stored = localStorage.getItem(`poop_inventory_${userId}`);
+        if (stored) {
+          return JSON.parse(stored);
+        }
+        return {
+          userId,
+          items: [],
+          totalPoops: 0,
+          lastUpdated: Date.now(),
+        };
+    }
+  } catch (error) {
+    console.error('❌ Error getting inventory, falling back to localStorage:', error);
+    const stored = localStorage.getItem(`poop_inventory_${userId}`);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+    return {
+      userId,
+      items: [],
+      totalPoops: 0,
+      lastUpdated: Date.now(),
+    };
+  }
+};
+
+export const addItemToInventory = async (userId: string, item: PoopItem): Promise<string> => {
+  const provider = await getDatabaseProvider();
+  
+  console.log('💾 Adding item to inventory using provider:', provider);
+  
+  try {
+    switch (provider) {
+      case 'convex':
+        console.log('🚀 Adding item to Convex...');
+        return await addItemToInventoryInConvex(userId, item);
+      case 'mongodb':
+        console.log('🍃 Adding item to MongoDB...');
+        // TODO: 實現 MongoDB 道具系統
+        throw new Error('MongoDB inventory not implemented yet');
+      case 'supabase':
+        console.log('🔵 Adding item to Supabase...');
+        // TODO: 實現 Supabase 道具系統
+        throw new Error('Supabase inventory not implemented yet');
+      case 'firebase':
+        console.log('🟠 Adding item to Firebase...');
+        // TODO: 實現 Firebase 道具系統
+        throw new Error('Firebase inventory not implemented yet');
+      case 'localStorage':
+      default:
+        console.log('📱 Adding item to localStorage...');
+        const inventory = await getUserInventory(userId);
+        inventory.items.push(item);
+        inventory.totalPoops += 1;
+        inventory.lastUpdated = Date.now();
+        localStorage.setItem(`poop_inventory_${userId}`, JSON.stringify(inventory));
+        return item.id;
+    }
+  } catch (error) {
+    console.error('❌ Error adding item to inventory, falling back to localStorage:', error);
+    const inventory = await getUserInventory(userId);
+    inventory.items.push(item);
+    inventory.totalPoops += 1;
+    inventory.lastUpdated = Date.now();
+    localStorage.setItem(`poop_inventory_${userId}`, JSON.stringify(inventory));
+    return item.id;
+  }
+};
+
+export const useItemFromInventory = async (userId: string, itemId: string): Promise<PoopItem> => {
+  const provider = await getDatabaseProvider();
+  
+  console.log('💾 Using item from inventory using provider:', provider);
+  
+  try {
+    switch (provider) {
+      case 'convex':
+        console.log('🚀 Using item from Convex...');
+        return await useItemFromConvex(userId, itemId);
+      case 'mongodb':
+        console.log('🍃 Using item from MongoDB...');
+        // TODO: 實現 MongoDB 道具系統
+        throw new Error('MongoDB inventory not implemented yet');
+      case 'supabase':
+        console.log('🔵 Using item from Supabase...');
+        // TODO: 實現 Supabase 道具系統
+        throw new Error('Supabase inventory not implemented yet');
+      case 'firebase':
+        console.log('🟠 Using item from Firebase...');
+        // TODO: 實現 Firebase 道具系統
+        throw new Error('Firebase inventory not implemented yet');
+      case 'localStorage':
+      default:
+        console.log('📱 Using item from localStorage...');
+        const inventory = await getUserInventory(userId);
+        const itemIndex = inventory.items.findIndex(item => item.id === itemId);
+        if (itemIndex === -1) {
+          throw new Error('Item not found in inventory');
+        }
+        const item = inventory.items[itemIndex];
+        inventory.items.splice(itemIndex, 1);
+        inventory.lastUpdated = Date.now();
+        localStorage.setItem(`poop_inventory_${userId}`, JSON.stringify(inventory));
+        return item;
+    }
+  } catch (error) {
+    console.error('❌ Error using item from inventory:', error);
+    throw error;
+  }
+};
+
+export const createPoopAttack = async (attack: Omit<PoopAttack, 'id' | 'viewed'>): Promise<string> => {
+  const provider = await getDatabaseProvider();
+  
+  console.log('💾 Creating poop attack using provider:', provider);
+  
+  try {
+    switch (provider) {
+      case 'convex':
+        console.log('🚀 Creating attack in Convex...');
+        return await createAttackInConvex(attack);
+      case 'mongodb':
+        console.log('🍃 Creating attack in MongoDB...');
+        // TODO: 實現 MongoDB 道具系統
+        throw new Error('MongoDB attacks not implemented yet');
+      case 'supabase':
+        console.log('🔵 Creating attack in Supabase...');
+        // TODO: 實現 Supabase 道具系統
+        throw new Error('Supabase attacks not implemented yet');
+      case 'firebase':
+        console.log('🟠 Creating attack in Firebase...');
+        // TODO: 實現 Firebase 道具系統
+        throw new Error('Firebase attacks not implemented yet');
+      case 'localStorage':
+      default:
+        console.log('📱 Creating attack in localStorage...');
+        const attackWithId: PoopAttack = {
+          ...attack,
+          id: `attack_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          viewed: false,
+        };
+        const attacks = getPoopAttacks(attack.toUserId);
+        attacks.push(attackWithId);
+        localStorage.setItem(`poop_attacks_${attack.toUserId}`, JSON.stringify(attacks));
+        return attackWithId.id;
+    }
+  } catch (error) {
+    console.error('❌ Error creating attack, falling back to localStorage:', error);
+    const attackWithId: PoopAttack = {
+      ...attack,
+      id: `attack_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      viewed: false,
+    };
+    const attacks = getPoopAttacks(attack.toUserId);
+    attacks.push(attackWithId);
+    localStorage.setItem(`poop_attacks_${attack.toUserId}`, JSON.stringify(attacks));
+    return attackWithId.id;
+  }
+};
+
+export const getPoopAttacks = (userId: string): PoopAttack[] => {
+  const stored = localStorage.getItem(`poop_attacks_${userId}`);
+  if (stored) {
+    return JSON.parse(stored);
+  }
+  return [];
+};
+
+export const getUserAttacks = async (userId: string): Promise<PoopAttack[]> => {
+  const provider = await getDatabaseProvider();
+  
+  console.log('💾 Getting user attacks using provider:', provider);
+  
+  try {
+    switch (provider) {
+      case 'convex':
+        console.log('🚀 Getting attacks from Convex...');
+        return await getUserAttacksFromConvex(userId);
+      case 'mongodb':
+        console.log('🍃 Getting attacks from MongoDB...');
+        // TODO: 實現 MongoDB 道具系統
+        throw new Error('MongoDB attacks not implemented yet');
+      case 'supabase':
+        console.log('🔵 Getting attacks from Supabase...');
+        // TODO: 實現 Supabase 道具系統
+        throw new Error('Supabase attacks not implemented yet');
+      case 'firebase':
+        console.log('🟠 Getting attacks from Firebase...');
+        // TODO: 實現 Firebase 道具系統
+        throw new Error('Firebase attacks not implemented yet');
+      case 'localStorage':
+      default:
+        console.log('📱 Getting attacks from localStorage...');
+        return getPoopAttacks(userId);
+    }
+  } catch (error) {
+    console.error('❌ Error getting attacks, falling back to localStorage:', error);
+    return getPoopAttacks(userId);
+  }
+};
+
+export const getUnviewedAttacks = async (userId: string): Promise<PoopAttack[]> => {
+  const provider = await getDatabaseProvider();
+  
+  console.log('💾 Getting unviewed attacks using provider:', provider);
+  
+  try {
+    switch (provider) {
+      case 'convex':
+        console.log('🚀 Getting unviewed attacks from Convex...');
+        return await getUnviewedAttacksFromConvex(userId);
+      case 'mongodb':
+        console.log('🍃 Getting unviewed attacks from MongoDB...');
+        // TODO: 實現 MongoDB 道具系統
+        throw new Error('MongoDB attacks not implemented yet');
+      case 'supabase':
+        console.log('🔵 Getting unviewed attacks from Supabase...');
+        // TODO: 實現 Supabase 道具系統
+        throw new Error('Supabase attacks not implemented yet');
+      case 'firebase':
+        console.log('🟠 Getting unviewed attacks from Firebase...');
+        // TODO: 實現 Firebase 道具系統
+        throw new Error('Firebase attacks not implemented yet');
+      case 'localStorage':
+      default:
+        console.log('📱 Getting unviewed attacks from localStorage...');
+        const attacks = getPoopAttacks(userId);
+        return attacks.filter(attack => !attack.viewed);
+    }
+  } catch (error) {
+    console.error('❌ Error getting unviewed attacks, falling back to localStorage:', error);
+    const attacks = getPoopAttacks(userId);
+    return attacks.filter(attack => !attack.viewed);
+  }
+};
+
+export const markAttackAsViewed = async (userId: string, attackId: string): Promise<void> => {
+  const provider = await getDatabaseProvider();
+  
+  console.log('💾 Marking attack as viewed using provider:', provider);
+  
+  try {
+    switch (provider) {
+      case 'convex':
+        console.log('🚀 Marking attack as viewed in Convex...');
+        await markAttackAsViewedInConvex(attackId);
+        break;
+      case 'mongodb':
+        console.log('🍃 Marking attack as viewed in MongoDB...');
+        // TODO: 實現 MongoDB 道具系統
+        throw new Error('MongoDB attacks not implemented yet');
+      case 'supabase':
+        console.log('🔵 Marking attack as viewed in Supabase...');
+        // TODO: 實現 Supabase 道具系統
+        throw new Error('Supabase attacks not implemented yet');
+      case 'firebase':
+        console.log('🟠 Marking attack as viewed in Firebase...');
+        // TODO: 實現 Firebase 道具系統
+        throw new Error('Firebase attacks not implemented yet');
+      case 'localStorage':
+      default:
+        console.log('📱 Marking attack as viewed in localStorage...');
+        const attacks = getPoopAttacks(userId);
+        const attack = attacks.find(a => a.id === attackId);
+        if (attack) {
+          attack.viewed = true;
+          localStorage.setItem(`poop_attacks_${userId}`, JSON.stringify(attacks));
+        }
+    }
+  } catch (error) {
+    console.error('❌ Error marking attack as viewed, falling back to localStorage:', error);
+    const attacks = getPoopAttacks(userId);
+    const attack = attacks.find(a => a.id === attackId);
+    if (attack) {
+      attack.viewed = true;
+      localStorage.setItem(`poop_attacks_${userId}`, JSON.stringify(attacks));
+    }
+  }
+};
+
+export const cleanupOldAttacks = async (userId: string): Promise<void> => {
+  const provider = await getDatabaseProvider();
+  
+  console.log('💾 Cleaning up old attacks using provider:', provider);
+  
+  try {
+    switch (provider) {
+      case 'convex':
+        console.log('🚀 Cleaning up old attacks in Convex...');
+        await cleanupOldAttacksInConvex(userId);
+        break;
+      case 'mongodb':
+        console.log('🍃 Cleaning up old attacks in MongoDB...');
+        // TODO: 實現 MongoDB 道具系統
+        throw new Error('MongoDB attacks not implemented yet');
+      case 'supabase':
+        console.log('🔵 Cleaning up old attacks in Supabase...');
+        // TODO: 實現 Supabase 道具系統
+        throw new Error('Supabase attacks not implemented yet');
+      case 'firebase':
+        console.log('🟠 Cleaning up old attacks in Firebase...');
+        // TODO: 實現 Firebase 道具系統
+        throw new Error('Firebase attacks not implemented yet');
+      case 'localStorage':
+      default:
+        console.log('📱 Cleaning up old attacks in localStorage...');
+        const attacks = getPoopAttacks(userId);
+        const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+        const recentAttacks = attacks.filter(attack => attack.timestamp > thirtyDaysAgo);
+        localStorage.setItem(`poop_attacks_${userId}`, JSON.stringify(recentAttacks));
+    }
+  } catch (error) {
+    console.error('❌ Error cleaning up old attacks, falling back to localStorage:', error);
+    const attacks = getPoopAttacks(userId);
+    const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+    const recentAttacks = attacks.filter(attack => attack.timestamp > thirtyDaysAgo);
+    localStorage.setItem(`poop_attacks_${userId}`, JSON.stringify(recentAttacks));
+  }
 };

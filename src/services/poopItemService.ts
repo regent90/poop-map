@@ -1,44 +1,32 @@
 import { UserInventory, PoopItem, PoopAttack } from '../types';
 import { generateRandomPoopItem, getItemObtainedMessage } from '../config/poopItems';
+import { 
+  getUserInventory as getInventoryFromDB, 
+  addItemToInventory, 
+  useItemFromInventory, 
+  createPoopAttack,
+  getUserAttacks,
+  getUnviewedAttacks as getUnviewedAttacksFromDB,
+  markAttackAsViewed as markAttackViewedInDB,
+  cleanupOldAttacks as cleanupOldAttacksInDB
+} from './unifiedDatabase';
 
 // 本地儲存鍵名
 const INVENTORY_KEY = (userId: string) => `poop_inventory_${userId}`;
 const ATTACKS_KEY = (userId: string) => `poop_attacks_${userId}`;
 
 // 獲取用戶道具庫存
-export const getUserInventory = (userId: string): UserInventory => {
-  const stored = localStorage.getItem(INVENTORY_KEY(userId));
-  if (stored) {
-    return JSON.parse(stored);
-  }
-  
-  return {
-    userId,
-    items: [],
-    totalPoops: 0,
-    lastUpdated: Date.now(),
-  };
-};
-
-// 保存用戶道具庫存
-export const saveUserInventory = (inventory: UserInventory): void => {
-  inventory.lastUpdated = Date.now();
-  localStorage.setItem(INVENTORY_KEY(inventory.userId), JSON.stringify(inventory));
+export const getUserInventory = async (userId: string): Promise<UserInventory> => {
+  return await getInventoryFromDB(userId);
 };
 
 // 記錄便便時獲得道具
-export const awardPoopItem = (userId: string): { item: PoopItem; message: string } | null => {
-  const inventory = getUserInventory(userId);
-  
-  // 更新總便便數
-  inventory.totalPoops += 1;
-  
+export const awardPoopItem = async (userId: string): Promise<{ item: PoopItem; message: string } | null> => {
   // 生成隨機道具
   const newItem = generateRandomPoopItem();
-  inventory.items.push(newItem);
   
-  // 保存庫存
-  saveUserInventory(inventory);
+  // 添加到庫存
+  await addItemToInventory(userId, newItem);
   
   // 返回獲得的道具和訊息
   return {
@@ -48,7 +36,7 @@ export const awardPoopItem = (userId: string): { item: PoopItem; message: string
 };
 
 // 使用道具攻擊朋友
-export const usePoopItem = (
+export const usePoopItem = async (
   fromUserId: string,
   fromUserName: string,
   fromUserEmail: string,
@@ -56,80 +44,47 @@ export const usePoopItem = (
   toUserEmail: string,
   itemId: string,
   message?: string
-): boolean => {
-  const inventory = getUserInventory(fromUserId);
-  
-  // 找到要使用的道具
-  const itemIndex = inventory.items.findIndex(item => item.id === itemId);
-  if (itemIndex === -1) {
-    return false; // 道具不存在
+): Promise<boolean> => {
+  try {
+    // 使用道具（從庫存中移除）
+    const item = await useItemFromInventory(fromUserId, itemId);
+    
+    // 創建攻擊記錄
+    const attack = {
+      fromUserId,
+      fromUserName,
+      fromUserEmail,
+      fromUserPicture,
+      toUserId: toUserEmail, // 這裡用 email 作為 userId
+      toUserEmail,
+      itemUsed: item,
+      timestamp: Date.now(),
+      message,
+    };
+    
+    // 保存攻擊記錄到目標用戶
+    await createPoopAttack(attack);
+    
+    return true;
+  } catch (error) {
+    console.error('❌ Failed to use poop item:', error);
+    return false;
   }
-  
-  const item = inventory.items[itemIndex];
-  
-  // 移除道具
-  inventory.items.splice(itemIndex, 1);
-  saveUserInventory(inventory);
-  
-  // 創建攻擊記錄
-  const attack: PoopAttack = {
-    id: `attack_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-    fromUserId,
-    fromUserName,
-    fromUserEmail,
-    fromUserPicture,
-    toUserId: toUserEmail, // 這裡用 email 作為 userId
-    toUserEmail,
-    itemUsed: item,
-    timestamp: Date.now(),
-    viewed: false,
-    message,
-  };
-  
-  // 保存攻擊記錄到目標用戶
-  const targetAttacks = getPoopAttacks(toUserEmail);
-  targetAttacks.push(attack);
-  savePoopAttacks(toUserEmail, targetAttacks);
-  
-  return true;
-};
-
-// 獲取用戶收到的攻擊
-export const getPoopAttacks = (userId: string): PoopAttack[] => {
-  const stored = localStorage.getItem(ATTACKS_KEY(userId));
-  if (stored) {
-    return JSON.parse(stored);
-  }
-  return [];
-};
-
-// 保存攻擊記錄
-export const savePoopAttacks = (userId: string, attacks: PoopAttack[]): void => {
-  localStorage.setItem(ATTACKS_KEY(userId), JSON.stringify(attacks));
 };
 
 // 獲取未查看的攻擊
-export const getUnviewedAttacks = (userId: string): PoopAttack[] => {
-  const attacks = getPoopAttacks(userId);
-  return attacks.filter(attack => !attack.viewed);
+export const getUnviewedAttacks = async (userId: string): Promise<PoopAttack[]> => {
+  return await getUnviewedAttacksFromDB(userId);
 };
 
 // 標記攻擊為已查看
-export const markAttackAsViewed = (userId: string, attackId: string): void => {
-  const attacks = getPoopAttacks(userId);
-  const attack = attacks.find(a => a.id === attackId);
-  if (attack) {
-    attack.viewed = true;
-    savePoopAttacks(userId, attacks);
-  }
+export const markAttackAsViewed = async (userId: string, attackId: string): Promise<void> => {
+  await markAttackViewedInDB(userId, attackId);
 };
 
 // 清除舊的攻擊記錄 (保留最近 30 天)
-export const cleanupOldAttacks = (userId: string): void => {
-  const attacks = getPoopAttacks(userId);
-  const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
-  const recentAttacks = attacks.filter(attack => attack.timestamp > thirtyDaysAgo);
-  savePoopAttacks(userId, recentAttacks);
+export const cleanupOldAttacks = async (userId: string): Promise<void> => {
+  await cleanupOldAttacksInDB(userId);
 };
 
 // 獲取道具統計

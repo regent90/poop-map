@@ -72,4 +72,66 @@ export default defineSchema({
     .index("by_poop", ["poopId"])
     .index("by_user_and_poop", ["userId", "poopId"])
     .index("by_timestamp", ["timestamp"]),
+
+  // 道具庫存表
+  inventories: defineTable({
+    userId: v.string(),
+    items: v.array(v.object({
+      id: v.string(),
+      type: v.union(
+        v.literal("poop_bomb"),
+        v.literal("golden_poop"),
+        v.literal("rainbow_poop"),
+        v.literal("stinky_poop")
+      ),
+      name: v.string(),
+      description: v.string(),
+      icon: v.string(),
+      rarity: v.union(
+        v.literal("common"),
+        v.literal("rare"),
+        v.literal("epic"),
+        v.literal("legendary")
+      ),
+      obtainedAt: v.number(),
+    })),
+    totalPoops: v.number(),
+    lastUpdated: v.number(),
+  })
+    .index("by_user", ["userId"]),
+
+  // 便便攻擊表
+  poopAttacks: defineTable({
+    fromUserId: v.string(),
+    fromUserName: v.string(),
+    fromUserEmail: v.string(),
+    fromUserPicture: v.optional(v.string()),
+    toUserId: v.string(),
+    toUserEmail: v.string(),
+    itemUsed: v.object({
+      id: v.string(),
+      type: v.union(
+        v.literal("poop_bomb"),
+        v.literal("golden_poop"),
+        v.literal("rainbow_poop"),
+        v.literal("stinky_poop")
+      ),
+      name: v.string(),
+      description: v.string(),
+      icon: v.string(),
+      rarity: v.union(
+        v.literal("common"),
+        v.literal("rare"),
+        v.literal("epic"),
+        v.literal("legendary")
+      ),
+      obtainedAt: v.number(),
+    }),
+    message: v.optional(v.string()),
+    timestamp: v.number(),
+    viewed: v.boolean(),
+  })
+    .index("by_target_user", ["toUserId"])
+    .index("by_target_user_and_viewed", ["toUserId", "viewed"])
+    .index("by_timestamp", ["timestamp"]),
 });

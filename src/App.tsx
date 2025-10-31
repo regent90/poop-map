@@ -564,12 +564,17 @@ const App: React.FC = () => {
 
     // 獎勵便便道具
     if (user?.email) {
-      const reward = awardPoopItem(user.email);
-      if (reward) {
-        setRewardedItem(reward);
-        setShowItemReward(true);
-        // 更新庫存
-        setUserInventory(getUserInventory(user.email));
+      try {
+        const reward = await awardPoopItem(user.email);
+        if (reward) {
+          setRewardedItem(reward);
+          setShowItemReward(true);
+          // 更新庫存
+          const updatedInventory = await getUserInventory(user.email);
+          setUserInventory(updatedInventory);
+        }
+      } catch (error) {
+        console.error('❌ Failed to award poop item:', error);
       }
     }
 
@@ -958,40 +963,51 @@ const App: React.FC = () => {
   };
 
   // 處理使用便便道具攻擊朋友
-  const handleUsePoopItem = (item: PoopItem, targetFriend: Friend, message?: string) => {
+  const handleUsePoopItem = async (item: PoopItem, targetFriend: Friend, message?: string) => {
     if (!user?.email) return;
 
-    const success = usePoopItem(
-      user.email,
-      user.name || 'Unknown',
-      user.email,
-      user.picture,
-      targetFriend.email,
-      item.id,
-      message
-    );
+    try {
+      const success = await usePoopItem(
+        user.email,
+        user.name || 'Unknown',
+        user.email,
+        user.picture,
+        targetFriend.email,
+        item.id,
+        message
+      );
 
-    if (success) {
-      // 更新庫存
-      setUserInventory(getUserInventory(user.email));
-      alert(`💥 成功向 ${targetFriend.name} 丟了 ${item.name}！`);
-    } else {
-      alert('❌ 攻擊失敗，道具不存在！');
+      if (success) {
+        // 更新庫存
+        const updatedInventory = await getUserInventory(user.email);
+        setUserInventory(updatedInventory);
+        alert(`💥 成功向 ${targetFriend.name} 丟了 ${item.name}！`);
+      } else {
+        alert('❌ 攻擊失敗，道具不存在！');
+      }
+    } catch (error) {
+      console.error('❌ Failed to use poop item:', error);
+      alert('❌ 攻擊失敗，請稍後再試！');
     }
   };
 
   // 處理攻擊動畫完成
-  const handleAttackComplete = () => {
+  const handleAttackComplete = async () => {
     if (currentAttack && user?.email) {
-      markAttackAsViewed(user.email, currentAttack.id);
-      setCurrentAttack(null);
-      
-      // 檢查是否還有其他未查看的攻擊
-      const remainingAttacks = getUnviewedAttacks(user.email);
-      if (remainingAttacks.length > 0) {
-        setTimeout(() => {
-          setCurrentAttack(remainingAttacks[0]);
-        }, 1000);
+      try {
+        await markAttackAsViewed(user.email, currentAttack.id);
+        setCurrentAttack(null);
+        
+        // 檢查是否還有其他未查看的攻擊
+        const remainingAttacks = await getUnviewedAttacks(user.email);
+        if (remainingAttacks.length > 0) {
+          setTimeout(() => {
+            setCurrentAttack(remainingAttacks[0]);
+          }, 1000);
+        }
+      } catch (error) {
+        console.error('❌ Failed to mark attack as viewed:', error);
+        setCurrentAttack(null);
       }
     }
   };
@@ -1010,17 +1026,26 @@ const App: React.FC = () => {
       loadFriends(user.email);
       
       // 載入用戶道具庫存
-      setUserInventory(getUserInventory(user.email));
+      const loadUserData = async () => {
+        try {
+          const inventory = await getUserInventory(user.email);
+          setUserInventory(inventory);
+          
+          // 檢查是否有未查看的攻擊
+          const unviewedAttacks = await getUnviewedAttacks(user.email);
+          if (unviewedAttacks.length > 0) {
+            // 顯示最新的攻擊
+            setCurrentAttack(unviewedAttacks[0]);
+          }
+          
+          // 清理舊的攻擊記錄
+          await cleanupOldAttacks(user.email);
+        } catch (error) {
+          console.error('❌ Failed to load user data:', error);
+        }
+      };
       
-      // 檢查是否有未查看的攻擊
-      const unviewedAttacks = getUnviewedAttacks(user.email);
-      if (unviewedAttacks.length > 0) {
-        // 顯示最新的攻擊
-        setCurrentAttack(unviewedAttacks[0]);
-      }
-      
-      // 清理舊的攻擊記錄
-      cleanupOldAttacks(user.email);
+      loadUserData();
     }
   }, [user]);
 
