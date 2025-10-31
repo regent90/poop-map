@@ -18,25 +18,50 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // 模擬排行榜數據 (之後會從資料庫獲取)
-  const generateMockLeaderboard = (): LeaderboardEntry[] => {
+  // 計算真實排行榜數據
+  const calculateRealLeaderboard = (): LeaderboardEntry[] => {
+    const now = Date.now();
+    const weekAgo = now - (7 * 24 * 60 * 60 * 1000);
+    const monthAgo = now - (30 * 24 * 60 * 60 * 1000);
+
+    // 獲取所有用戶（當前用戶 + 朋友）
     const allUsers = [
       { email: user?.email || '', name: user?.name || 'You', picture: user?.picture },
       ...friends.map(f => ({ email: f.email, name: f.name, picture: f.picture }))
     ];
 
-    return allUsers.map((u, index) => ({
-      userId: u.email,
-      userEmail: u.email,
-      userName: u.name,
-      userPicture: u.picture,
-      totalPoops: Math.floor(Math.random() * 100) + 10,
-      weeklyPoops: Math.floor(Math.random() * 20) + 1,
-      monthlyPoops: Math.floor(Math.random() * 50) + 5,
-      averageRating: Math.round((Math.random() * 2 + 3) * 10) / 10, // 3.0-5.0
-      lastPoopTime: Date.now() - Math.floor(Math.random() * 7 * 24 * 60 * 60 * 1000),
-      rank: index + 1,
-    })).sort((a, b) => {
+    // 為每個用戶計算統計數據
+    const leaderboardData = allUsers.map(u => {
+      // 獲取該用戶的所有便便記錄
+      const userPoops = poops.filter(p => p.userId === u.email);
+      
+      const weeklyPoops = userPoops.filter(p => p.timestamp >= weekAgo).length;
+      const monthlyPoops = userPoops.filter(p => p.timestamp >= monthAgo).length;
+      const totalPoops = userPoops.length;
+      
+      const totalRating = userPoops.reduce((sum, p) => sum + (p.rating || 0), 0);
+      const averageRating = totalPoops > 0 ? totalRating / totalPoops : 0;
+      
+      const lastPoopTime = userPoops.length > 0 
+        ? Math.max(...userPoops.map(p => p.timestamp))
+        : 0;
+
+      return {
+        userId: u.email,
+        userEmail: u.email,
+        userName: u.name,
+        userPicture: u.picture,
+        totalPoops,
+        weeklyPoops,
+        monthlyPoops,
+        averageRating: Math.round(averageRating * 10) / 10,
+        lastPoopTime,
+        rank: 0, // 將在排序後設置
+      };
+    });
+
+    // 根據選擇的時間段排序
+    const sortedData = leaderboardData.sort((a, b) => {
       switch (selectedPeriod) {
         case 'weekly':
           return b.weeklyPoops - a.weeklyPoops;
@@ -47,17 +72,20 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({
         default:
           return 0;
       }
-    }).map((entry, index) => ({ ...entry, rank: index + 1 }));
+    });
+
+    // 設置排名
+    return sortedData.map((entry, index) => ({ ...entry, rank: index + 1 }));
   };
 
   useEffect(() => {
     if (isOpen) {
       setLoading(true);
-      // 模擬API調用延遲
+      // 計算真實排行榜數據
       setTimeout(() => {
-        setLeaderboard(generateMockLeaderboard());
+        setLeaderboard(calculateRealLeaderboard());
         setLoading(false);
-      }, 500);
+      }, 100);
     }
   }, [isOpen, selectedPeriod, friends]);
 

@@ -6,6 +6,7 @@ interface FeedModalProps {
   onClose: () => void;
   user: UserProfile | null;
   friends: any[];
+  poops: any[];
 }
 
 export const FeedModal: React.FC<FeedModalProps> = ({
@@ -13,99 +14,76 @@ export const FeedModal: React.FC<FeedModalProps> = ({
   onClose,
   user,
   friends,
+  poops,
 }) => {
   const [activities, setActivities] = useState<FeedActivity[]>([]);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState<'all' | 'friends' | 'me'>('all');
 
-  // 生成模擬動態數據
-  const generateMockActivities = (): FeedActivity[] => {
-    const allUsers = [
-      { email: user?.email || '', name: user?.name || 'You', picture: user?.picture },
-      ...friends.map(f => ({ email: f.email, name: f.name, picture: f.picture }))
-    ];
+  // 生成真實動態數據
+  const generateRealActivities = (): FeedActivity[] => {
+    const activities: FeedActivity[] = [];
+    
+    // 從便便記錄生成活動
+    const allUsers = [user, ...friends].filter(Boolean);
+    const relevantPoops = poops.filter(poop => {
+      if (filter === 'me') return poop.userId === user?.email;
+      if (filter === 'friends') return poop.userId !== user?.email && friends.some(f => f.email === poop.userId);
+      return poop.userId === user?.email || friends.some(f => f.email === poop.userId);
+    });
 
-    const activityTypes = [
-      'poop_recorded',
-      'achievement_unlocked',
-      'friend_added',
-      'attack_sent',
-    ];
-
-    const locations = [
-      '台北車站', '西門町', '信義區', '士林夜市', '淡水老街',
-      '中正紀念堂', '101大樓', '貓空纜車', '陽明山', '北投溫泉'
-    ];
-
-    const achievements = [
-      { id: 'first_poop', name: '初次體驗', icon: '🚽' },
-      { id: 'poop_10', name: '便便新手', icon: '💩' },
-      { id: 'perfect_rating', name: '完美體驗', icon: '⭐' },
-      { id: 'first_friend', name: '社交新手', icon: '👥' },
-    ];
-
-    return Array.from({ length: 20 }, (_, i) => {
-      const randomUser = allUsers[Math.floor(Math.random() * allUsers.length)];
-      const activityType = activityTypes[Math.floor(Math.random() * activityTypes.length)];
-      const timestamp = Date.now() - Math.floor(Math.random() * 7 * 24 * 60 * 60 * 1000); // 過去7天
-
-      let data: any = {};
-      
-      switch (activityType) {
-        case 'poop_recorded':
-          data = {
-            location: locations[Math.floor(Math.random() * locations.length)],
-            rating: Math.floor(Math.random() * 5) + 1,
-          };
-          break;
-        case 'achievement_unlocked':
-          const achievement = achievements[Math.floor(Math.random() * achievements.length)];
-          data = {
-            achievementId: achievement.id,
-            achievementName: achievement.name,
-            achievementIcon: achievement.icon,
-          };
-          break;
-        case 'friend_added':
-          const friendUser = allUsers.filter(u => u.email !== randomUser.email)[0];
-          data = {
-            friendEmail: friendUser?.email,
-            friendName: friendUser?.name,
-          };
-          break;
-        case 'attack_sent':
-          const targetUser = allUsers.filter(u => u.email !== randomUser.email)[0];
-          data = {
-            targetEmail: targetUser?.email,
-            targetName: targetUser?.name,
-            itemName: ['便便炸彈', '黃金便便', '彩虹便便'][Math.floor(Math.random() * 3)],
-          };
-          break;
+    relevantPoops.forEach(poop => {
+      const poopUser = allUsers.find(u => u?.email === poop.userId);
+      if (poopUser) {
+        activities.push({
+          id: `poop_${poop.id}`,
+          userId: poop.userId,
+          userEmail: poop.userId,
+          userName: poopUser.name || 'Unknown',
+          userPicture: poopUser.picture,
+          type: 'poop_recorded',
+          timestamp: poop.timestamp,
+          data: {
+            location: poop.customLocation || poop.placeName || '未知地點',
+            rating: poop.rating,
+            poopId: poop.id,
+          },
+          privacy: poop.privacy,
+        });
       }
+    });
 
-      return {
-        id: `activity_${i}`,
-        userId: randomUser.email,
-        userEmail: randomUser.email,
-        userName: randomUser.name,
-        userPicture: randomUser.picture,
-        type: activityType as any,
-        timestamp,
-        data,
-        privacy: 'friends' as any,
-      };
-    }).sort((a, b) => b.timestamp - a.timestamp);
+    // 從好友關係生成活動（簡化版本）
+    friends.forEach(friend => {
+      // 假設每個朋友都有一個添加時間
+      activities.push({
+        id: `friend_${friend.email}`,
+        userId: user?.email || '',
+        userEmail: user?.email || '',
+        userName: user?.name || 'You',
+        userPicture: user?.picture,
+        type: 'friend_added',
+        timestamp: friend.addedAt || Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000,
+        data: {
+          friendEmail: friend.email,
+          friendName: friend.name,
+        },
+        privacy: 'friends',
+      });
+    });
+
+    return activities.sort((a, b) => b.timestamp - a.timestamp).slice(0, 50);
   };
 
   useEffect(() => {
     if (isOpen) {
       setLoading(true);
       setTimeout(() => {
-        setActivities(generateMockActivities());
+        setActivities(generateRealActivities());
         setLoading(false);
-      }, 500);
+      }, 100);
     }
-  }, [isOpen, friends]);
+  }, [isOpen, friends, poops, user, filter]);
 
   const getActivityIcon = (type: string) => {
     switch (type) {

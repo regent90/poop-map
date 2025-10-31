@@ -1591,6 +1591,8 @@ const App: React.FC = () => {
         isOpen={showAchievements}
         onClose={() => setShowAchievements(false)}
         user={user}
+        poops={poops}
+        friends={friends}
       />
 
       {/* Feed Modal */}
@@ -1599,6 +1601,7 @@ const App: React.FC = () => {
         onClose={() => setShowFeed(false)}
         user={user}
         friends={friends}
+        poops={poops}
       />
 
       {/* Challenges Modal */}

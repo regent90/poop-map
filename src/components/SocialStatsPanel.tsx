@@ -56,9 +56,9 @@ export const SocialStatsPanel: React.FC<SocialStatsPanelProps> = ({
       bestRating: Math.max(...userPoops.map(p => p.rating || 0), 0),
       totalFriends: friends.length,
       consecutiveDays,
-      totalAttacksSent: Math.floor(Math.random() * 20), // 模擬數據
-      totalAttacksReceived: Math.floor(Math.random() * 15), // 模擬數據
-      achievementsUnlocked: Math.floor(Math.random() * 10) + 2, // 模擬數據
+      totalAttacksSent: 0, // 將從資料庫獲取
+      totalAttacksReceived: 0, // 將從資料庫獲取
+      achievementsUnlocked: 0, // 將從資料庫獲取
       totalPoints: (userPoops.length * 10) + (friends.length * 50) + (userInventory?.items?.length || 0) * 25,
       lastUpdated: now,
     };

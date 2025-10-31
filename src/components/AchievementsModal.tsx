@@ -5,12 +5,16 @@ interface AchievementsModalProps {
   isOpen: boolean;
   onClose: () => void;
   user: UserProfile | null;
+  poops: any[];
+  friends: any[];
 }
 
 export const AchievementsModal: React.FC<AchievementsModalProps> = ({
   isOpen,
   onClose,
   user,
+  poops,
+  friends,
 }) => {
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [userAchievements, setUserAchievements] = useState<UserAchievement[]>([]);
@@ -157,17 +161,80 @@ export const AchievementsModal: React.FC<AchievementsModalProps> = ({
     },
   ];
 
-  // 模擬用戶成就數據
-  const generateMockUserAchievements = (): UserAchievement[] => {
-    const unlockedCount = Math.floor(Math.random() * 8) + 2; // 2-9個已解鎖成就
-    const shuffled = [...predefinedAchievements].sort(() => 0.5 - Math.random());
-    
-    return shuffled.slice(0, unlockedCount).map(achievement => ({
-      userId: user?.email || '',
-      achievementId: achievement.id,
-      unlockedAt: Date.now() - Math.floor(Math.random() * 30 * 24 * 60 * 60 * 1000), // 過去30天內
-      progress: 100,
-    }));
+  // 計算真實用戶成就數據
+  const calculateRealUserAchievements = (): UserAchievement[] => {
+    if (!user?.email) return [];
+
+    const userPoops = poops.filter(p => p.userId === user.email);
+    const unlockedAchievements: UserAchievement[] = [];
+
+    // 檢查每個成就是否已解鎖
+    predefinedAchievements.forEach(achievement => {
+      let unlocked = false;
+      let unlockedAt = Date.now();
+
+      switch (achievement.requirement.type) {
+        case 'poop_count':
+          if (userPoops.length >= achievement.requirement.value) {
+            unlocked = true;
+            // 找到達成條件的時間點
+            if (userPoops.length >= achievement.requirement.value) {
+              const sortedPoops = userPoops.sort((a, b) => a.timestamp - b.timestamp);
+              if (sortedPoops[achievement.requirement.value - 1]) {
+                unlockedAt = sortedPoops[achievement.requirement.value - 1].timestamp;
+              }
+            }
+          }
+          break;
+        
+        case 'rating_average':
+          const totalRating = userPoops.reduce((sum, p) => sum + (p.rating || 0), 0);
+          const averageRating = userPoops.length > 0 ? totalRating / userPoops.length : 0;
+          if (averageRating >= achievement.requirement.value) {
+            unlocked = true;
+          }
+          break;
+        
+        case 'friend_count':
+          if (friends.length >= achievement.requirement.value) {
+            unlocked = true;
+          }
+          break;
+        
+        case 'attack_count':
+          // 這裡需要從攻擊記錄中獲取，暫時設為 false
+          unlocked = false;
+          break;
+        
+        case 'special':
+          // 特殊成就需要特殊邏輯檢查
+          if (achievement.id === 'early_bird') {
+            // 檢查是否有早上6點前的記錄
+            unlocked = userPoops.some(p => {
+              const hour = new Date(p.timestamp).getHours();
+              return hour < 6;
+            });
+          } else if (achievement.id === 'night_owl') {
+            // 檢查是否有晚上11點後的記錄
+            unlocked = userPoops.some(p => {
+              const hour = new Date(p.timestamp).getHours();
+              return hour >= 23;
+            });
+          }
+          break;
+      }
+
+      if (unlocked) {
+        unlockedAchievements.push({
+          userId: user.email,
+          achievementId: achievement.id,
+          unlockedAt,
+          progress: 100,
+        });
+      }
+    });
+
+    return unlockedAchievements;
   };
 
   useEffect(() => {
