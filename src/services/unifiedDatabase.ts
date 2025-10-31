@@ -733,8 +733,9 @@ export const subscribeToPoopInteractions = (poopId: string, callback: (data: { l
   return () => {
     console.log('🔄 Unsubscribing from interactions for poop:', poopId);
   };
-};// 道具
-系統相關操作
+};
+
+// 道具系統相關操作
 export const getUserInventory = async (userId: string): Promise<UserInventory> => {
   const provider = await getDatabaseProvider();
   
