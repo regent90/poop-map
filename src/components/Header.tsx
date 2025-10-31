@@ -17,9 +17,14 @@ interface HeaderProps {
   onShowIconShowcase?: () => void;
   onOpenInventory?: () => void;
   inventoryItemCount?: number;
+  onOpenLeaderboard?: () => void;
+  onOpenAchievements?: () => void;
+  onOpenFeed?: () => void;
+  onOpenChallenges?: () => void;
+  onOpenNotifications?: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ user, onLogout, currentLang, onLangChange, translations, poops, onViewPoopDetails, onOpenFriends, friendsCount = 0, onShowIconShowcase, onOpenInventory, inventoryItemCount = 0 }) => {
+export const Header: React.FC<HeaderProps> = ({ user, onLogout, currentLang, onLangChange, translations, poops, onViewPoopDetails, onOpenFriends, friendsCount = 0, onShowIconShowcase, onOpenInventory, inventoryItemCount = 0, onOpenLeaderboard, onOpenAchievements, onOpenFeed, onOpenChallenges, onOpenNotifications }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -125,6 +130,55 @@ export const Header: React.FC<HeaderProps> = ({ user, onLogout, currentLang, onL
                 {inventoryItemCount}
               </span>
             )}
+          </button>
+
+          {/* Leaderboard Button */}
+          <button
+            onClick={onOpenLeaderboard}
+            className="relative p-2 rounded-full hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-white"
+            aria-label="排行榜"
+          >
+            <span className="text-2xl">🏆</span>
+          </button>
+
+          {/* Achievements Button */}
+          <button
+            onClick={onOpenAchievements}
+            className="relative p-2 rounded-full hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-white"
+            aria-label="成就系統"
+          >
+            <span className="text-2xl">🏅</span>
+          </button>
+
+          {/* Feed Button */}
+          <button
+            onClick={onOpenFeed}
+            className="relative p-2 rounded-full hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-white"
+            aria-label="動態牆"
+          >
+            <span className="text-2xl">📰</span>
+          </button>
+
+          {/* Challenges Button */}
+          <button
+            onClick={onOpenChallenges}
+            className="relative p-2 rounded-full hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-white"
+            aria-label="挑戰系統"
+          >
+            <span className="text-2xl">🎯</span>
+          </button>
+
+          {/* Notifications Button */}
+          <button
+            onClick={onOpenNotifications}
+            className="relative p-2 rounded-full hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-white"
+            aria-label="通知中心"
+          >
+            <span className="text-2xl">🔔</span>
+            {/* 未讀通知指示器 */}
+            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+              3
+            </span>
           </button>
           
           <div className="relative" ref={menuRef}>

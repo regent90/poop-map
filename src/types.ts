@@ -1,4 +1,3 @@
-
 export interface UserProfile {
   name?: string;
   picture?: string;
@@ -128,6 +127,15 @@ export interface TranslationStrings {
   likedBy: string;
   noComments: string;
   noLikes: string;
+  // 新增社交功能翻譯
+  leaderboard: string;
+  achievements: string;
+  feed: string;
+  challenges: string;
+  statistics: string;
+  weeklyStats: string;
+  monthlyStats: string;
+  allTimeStats: string;
 }
 
 export type Translations = {
@@ -172,4 +180,181 @@ export interface PoopBombEffect {
   duration: number; // 動畫持續時間 (毫秒)
   intensity: 'light' | 'medium' | 'heavy' | 'extreme';
   particles: number; // 粒子數量
+}
+
+// 新增社交功能類型
+
+// 排行榜系統
+export interface LeaderboardEntry {
+  userId: string;
+  userEmail: string;
+  userName: string;
+  userPicture?: string;
+  totalPoops: number;
+  weeklyPoops: number;
+  monthlyPoops: number;
+  averageRating: number;
+  lastPoopTime: number;
+  rank: number;
+}
+
+export interface Leaderboard {
+  period: 'weekly' | 'monthly' | 'allTime';
+  entries: LeaderboardEntry[];
+  lastUpdated: number;
+}
+
+// 成就系統
+export interface Achievement {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  category: 'quantity' | 'quality' | 'social' | 'special';
+  requirement: {
+    type: 'poop_count' | 'rating_average' | 'friend_count' | 'attack_count' | 'special';
+    value: number;
+    timeframe?: 'daily' | 'weekly' | 'monthly' | 'allTime';
+  };
+  rarity: 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond';
+  points: number;
+}
+
+export interface UserAchievement {
+  userId: string;
+  achievementId: string;
+  unlockedAt: number;
+  progress?: number; // 進度百分比 (0-100)
+}
+
+// 動態牆系統
+export interface FeedActivity {
+  id: string;
+  userId: string;
+  userEmail: string;
+  userName: string;
+  userPicture?: string;
+  type: 'poop_recorded' | 'achievement_unlocked' | 'friend_added' | 'attack_sent' | 'challenge_completed';
+  timestamp: number;
+  data: {
+    poopId?: string;
+    achievementId?: string;
+    friendEmail?: string;
+    attackId?: string;
+    challengeId?: string;
+    location?: string;
+    rating?: number;
+    [key: string]: any;
+  };
+  privacy: PrivacyLevel;
+}
+
+// 挑戰系統
+export interface Challenge {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  type: 'daily' | 'weekly' | 'monthly' | 'custom';
+  requirement: {
+    type: 'poop_count' | 'rating_target' | 'location_variety' | 'friend_interaction';
+    value: number;
+    timeframe: number; // 時間限制 (毫秒)
+  };
+  reward: {
+    type: 'achievement' | 'item' | 'points';
+    value: string | number;
+  };
+  startDate: number;
+  endDate: number;
+  participants: string[]; // 參與者用戶ID列表
+}
+
+export interface UserChallenge {
+  userId: string;
+  challengeId: string;
+  progress: number;
+  completed: boolean;
+  completedAt?: number;
+  reward?: {
+    type: string;
+    value: string | number;
+  };
+}
+
+// 統計系統
+export interface UserStats {
+  userId: string;
+  totalPoops: number;
+  weeklyPoops: number;
+  monthlyPoops: number;
+  averageRating: number;
+  bestRating: number;
+  worstRating: number;
+  favoriteLocation?: string;
+  longestStreak: number; // 連續記錄天數
+  currentStreak: number;
+  totalFriends: number;
+  totalAttacksSent: number;
+  totalAttacksReceived: number;
+  achievementsUnlocked: number;
+  totalPoints: number;
+  lastUpdated: number;
+}
+
+// 便便熱點系統
+export interface PoopHotspot {
+  id: string;
+  lat: number;
+  lng: number;
+  radius: number; // 熱點半徑 (米)
+  name: string;
+  poopCount: number;
+  averageRating: number;
+  lastActivity: number;
+  topContributors: {
+    userId: string;
+    userName: string;
+    count: number;
+  }[];
+}// 挑
+戰系統
+export interface Challenge {
+  id: string;
+  title: string;
+  description: string;
+  type: 'poop_count' | 'rating_streak' | 'friend_invite' | 'attack_count' | 'location_variety';
+  target: number; // 目標數量
+  duration: number; // 持續時間 (毫秒)
+  createdBy: string;
+  createdByName: string;
+  participants: string[]; // 參與者用戶ID列表
+  startTime: number;
+  endTime: number;
+  status: 'active' | 'completed' | 'expired';
+  reward: {
+    type: 'achievement' | 'item' | 'points';
+    value: string | number;
+  };
+  progress: number; // 當前進度
+}
+
+// 通知系統
+export interface Notification {
+  id: string;
+  userId: string;
+  type: 'friend_request' | 'attack_received' | 'achievement_unlocked' | 'challenge_invite' | 'leaderboard_update' | 'item_received';
+  title: string;
+  message: string;
+  icon: string;
+  timestamp: number;
+  read: boolean;
+  priority: 'low' | 'medium' | 'high';
+  actionUrl?: string;
+  data?: {
+    fromUserId?: string;
+    achievementId?: string;
+    challengeId?: string;
+    itemId?: string;
+  };
 }

@@ -13,6 +13,12 @@ import { PoopDetailModal } from './components/PoopDetailModal';
 import { FriendsModal } from './components/FriendsModal';
 import { PoopInventory } from './components/PoopInventory';
 import { PoopBombAnimation } from './components/PoopBombAnimation';
+import { LeaderboardModal } from './components/LeaderboardModal';
+import { AchievementsModal } from './components/AchievementsModal';
+import { FeedModal } from './components/FeedModal';
+import { ChallengesModal } from './components/ChallengesModal';
+import { NotificationCenter } from './components/NotificationCenter';
+import { SocialStatsPanel } from './components/SocialStatsPanel';
 
 import { PoopIcon, SpinnerIcon } from './components/icons';
 import { IconShowcase } from './components/IconShowcase';
@@ -65,6 +71,14 @@ const App: React.FC = () => {
   const [currentAttack, setCurrentAttack] = useState<PoopAttack | null>(null);
   const [showItemReward, setShowItemReward] = useState(false);
   const [rewardedItem, setRewardedItem] = useState<{ item: PoopItem; message: string } | null>(null);
+  
+  // 新增社交功能狀態
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [showAchievements, setShowAchievements] = useState(false);
+  const [showFeed, setShowFeed] = useState(false);
+  const [showChallenges, setShowChallenges] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showSocialStats, setShowSocialStats] = useState(false);
   const [showDetailView, setShowDetailView] = useState(false);
   const [selectedPoop, setSelectedPoop] = useState<Poop | null>(null);
   const [selectedPoopNumber, setSelectedPoopNumber] = useState(0);
@@ -1297,6 +1311,11 @@ const App: React.FC = () => {
           onShowIconShowcase={() => setShowIconShowcase(true)}
           onOpenInventory={() => setShowInventory(true)}
           inventoryItemCount={userInventory?.items.length || 0}
+          onOpenLeaderboard={() => setShowLeaderboard(true)}
+          onOpenAchievements={() => setShowAchievements(true)}
+          onOpenFeed={() => setShowFeed(true)}
+          onOpenChallenges={() => setShowChallenges(true)}
+          onOpenNotifications={() => setShowNotifications(true)}
         />
       </div>
 
@@ -1311,17 +1330,97 @@ const App: React.FC = () => {
           </div>
         </div>
       ) : (
-        <div className="mobile-map-container">
-          <Wrapper 
-            apiKey={apiKey} 
-            libraries={['marker']} 
-            render={render}
-            version="weekly"
-            region="TW"
-            language="zh-TW"
-          >
-            <PoopMap poops={getVisiblePoops()} onPoopClick={handlePoopClick} />
-          </Wrapper>
+        <div className="flex h-full">
+          {/* 主地圖區域 */}
+          <div className="flex-1 mobile-map-container">
+            <Wrapper 
+              apiKey={apiKey} 
+              libraries={['marker']} 
+              render={render}
+              version="weekly"
+              region="TW"
+              language="zh-TW"
+            >
+              <PoopMap poops={getVisiblePoops()} onPoopClick={handlePoopClick} />
+            </Wrapper>
+          </div>
+
+          {/* 社交統計側邊欄 */}
+          <div className="w-80 bg-gray-50 border-l border-gray-200 overflow-y-auto hidden lg:block">
+            <div className="p-4 space-y-4">
+              <SocialStatsPanel
+                user={user}
+                friends={friends}
+                poops={poops}
+                userInventory={userInventory}
+              />
+              
+              {/* 快速操作面板 */}
+              <div className="bg-white rounded-lg shadow p-4">
+                <h3 className="font-bold text-gray-800 mb-3">🚀 快速操作</h3>
+                <div className="space-y-2">
+                  <button
+                    onClick={() => setShowChallenges(true)}
+                    className="w-full py-2 px-3 bg-purple-100 text-purple-700 rounded-lg text-sm font-medium hover:bg-purple-200 transition-colors flex items-center"
+                  >
+                    <span className="mr-2">🎯</span>
+                    查看挑戰
+                  </button>
+                  <button
+                    onClick={() => setShowLeaderboard(true)}
+                    className="w-full py-2 px-3 bg-yellow-100 text-yellow-700 rounded-lg text-sm font-medium hover:bg-yellow-200 transition-colors flex items-center"
+                  >
+                    <span className="mr-2">🏆</span>
+                    排行榜
+                  </button>
+                  <button
+                    onClick={() => setShowAchievements(true)}
+                    className="w-full py-2 px-3 bg-green-100 text-green-700 rounded-lg text-sm font-medium hover:bg-green-200 transition-colors flex items-center"
+                  >
+                    <span className="mr-2">🏅</span>
+                    我的成就
+                  </button>
+                  <button
+                    onClick={() => setShowFeed(true)}
+                    className="w-full py-2 px-3 bg-blue-100 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-200 transition-colors flex items-center"
+                  >
+                    <span className="mr-2">📰</span>
+                    動態牆
+                  </button>
+                </div>
+              </div>
+
+              {/* 在線好友 */}
+              {friends.length > 0 && (
+                <div className="bg-white rounded-lg shadow p-4">
+                  <h3 className="font-bold text-gray-800 mb-3">👥 好友動態</h3>
+                  <div className="space-y-2">
+                    {friends.slice(0, 5).map((friend) => (
+                      <div key={friend.email} className="flex items-center justify-between">
+                        <div className="flex items-center">
+                          <img
+                            src={friend.picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(friend.name)}&background=random&color=fff`}
+                            alt={friend.name}
+                            className="w-6 h-6 rounded-full mr-2"
+                          />
+                          <span className="text-sm text-gray-700">{friend.name}</span>
+                        </div>
+                        <span className="text-xs text-green-500">●</span>
+                      </div>
+                    ))}
+                    {friends.length > 5 && (
+                      <button
+                        onClick={() => setShowFriendsModal(true)}
+                        className="text-xs text-purple-600 hover:text-purple-800"
+                      >
+                        查看全部 {friends.length} 個好友
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
@@ -1478,6 +1577,44 @@ const App: React.FC = () => {
       >
         🔍
       </button>
+
+      {/* Leaderboard Modal */}
+      <LeaderboardModal
+        isOpen={showLeaderboard}
+        onClose={() => setShowLeaderboard(false)}
+        user={user}
+        friends={friends}
+      />
+
+      {/* Achievements Modal */}
+      <AchievementsModal
+        isOpen={showAchievements}
+        onClose={() => setShowAchievements(false)}
+        user={user}
+      />
+
+      {/* Feed Modal */}
+      <FeedModal
+        isOpen={showFeed}
+        onClose={() => setShowFeed(false)}
+        user={user}
+        friends={friends}
+      />
+
+      {/* Challenges Modal */}
+      <ChallengesModal
+        isOpen={showChallenges}
+        onClose={() => setShowChallenges(false)}
+        user={user}
+        friends={friends}
+      />
+
+      {/* Notification Center */}
+      <NotificationCenter
+        isOpen={showNotifications}
+        onClose={() => setShowNotifications(false)}
+        user={user}
+      />
     </div>
   );
 };
