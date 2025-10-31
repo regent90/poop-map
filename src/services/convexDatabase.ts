@@ -324,8 +324,8 @@ export const subscribeToPoopInteractionsInConvex = (poopId: string, callback: (d
     console.log(`🔄 Unsubscribing from Convex poop interactions: ${poopId}`);
   };
 };
-// 
-道具系統相關操作
+
+// 道具系統相關操作
 export const getUserInventoryFromConvex = async (userId: string): Promise<UserInventory> => {
   try {
     const inventory = await convex.query(api.poopItems.getUserInventory, { userId });
