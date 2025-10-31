@@ -54,15 +54,31 @@ export const getChallenges = query({
     let challenges;
     
     if (args.userId) {
-      // 獲取用戶參與的挑戰
-      challenges = await ctx.db
+      // 獲取用戶創建的挑戰
+      const createdChallenges = await ctx.db
         .query("challenges")
-        .filter((q) => q.or(
-          q.eq(q.field("createdBy"), args.userId),
-          q.gt(q.field("participants").length, 0) // 簡化查詢，實際應該檢查 participants 數組
-        ))
+        .filter((q) => q.eq(q.field("createdBy"), args.userId))
+        .order("desc")
+        .take(25);
+      
+      // 獲取所有挑戰，然後在應用層過濾參與者
+      const allChallenges = await ctx.db
+        .query("challenges")
         .order("desc")
         .take(50);
+      
+      // 過濾出用戶參與的挑戰
+      const participatedChallenges = allChallenges.filter(challenge => 
+        args.userId && challenge.participants.includes(args.userId)
+      );
+      
+      // 合併並去重
+      const challengeMap = new Map();
+      [...createdChallenges, ...participatedChallenges].forEach(challenge => {
+        challengeMap.set(challenge._id, challenge);
+      });
+      
+      challenges = Array.from(challengeMap.values());
     } else {
       // 獲取所有活躍挑戰
       challenges = await ctx.db

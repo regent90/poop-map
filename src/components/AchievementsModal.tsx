@@ -240,7 +240,7 @@ export const AchievementsModal: React.FC<AchievementsModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       setAchievements(predefinedAchievements);
-      setUserAchievements(generateMockUserAchievements());
+      setUserAchievements(calculateRealUserAchievements());
     }
   }, [isOpen]);
 
