@@ -45,6 +45,7 @@ import {
   getCurrentDatabaseProvider,
   removeFriend
 } from './services/unifiedDatabase';
+import { soundManager } from './utils/soundEffects';
 import { 
   getUserInventory, 
   awardPoopItem, 
@@ -106,8 +107,11 @@ const App: React.FC = () => {
 
   // 初始化音效設定
   useEffect(() => {
-    const { soundManager } = require('./utils/soundEffects');
-    soundManager.setEnabled(soundEnabled);
+    try {
+      soundManager.setEnabled(soundEnabled);
+    } catch (error) {
+      console.warn('Failed to initialize sound manager:', error);
+    }
   }, [soundEnabled]);
 
   // Clean up localStorage on app start
@@ -1189,12 +1193,15 @@ const App: React.FC = () => {
 
   // 音效設定改變處理
   const handleSoundToggle = (enabled: boolean) => {
-    setSoundEnabled(enabled);
-    localStorage.setItem('soundEnabled', JSON.stringify(enabled));
-    // 更新音效管理器設定
-    const { soundManager } = require('./utils/soundEffects');
-    soundManager.setEnabled(enabled);
-    console.log(`🔊 Sound effects ${enabled ? 'enabled' : 'disabled'}`);
+    try {
+      setSoundEnabled(enabled);
+      localStorage.setItem('soundEnabled', JSON.stringify(enabled));
+      // 更新音效管理器設定
+      soundManager.setEnabled(enabled);
+      console.log(`🔊 Sound effects ${enabled ? 'enabled' : 'disabled'}`);
+    } catch (error) {
+      console.warn('Failed to toggle sound effects:', error);
+    }
   };
 
   // Friend system funct
