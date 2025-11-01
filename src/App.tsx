@@ -1374,105 +1374,26 @@ const App: React.FC = () => {
           </div>
         </div>
       ) : (
-        <div className="flex h-full">
-          {/* 主地圖區域 */}
-          <div className="flex-1 mobile-map-container relative">
-            {/* 可見性篩選器 */}
-            <div className="absolute top-4 left-4 z-20">
-              <PoopVisibilityFilter
-                currentFilter={poopVisibilityFilter}
-                onFilterChange={handleFilterChange}
-                counts={getPoopCounts()}
-              />
-            </div>
-            <Wrapper 
-              apiKey={apiKey} 
-              libraries={['marker']} 
-              render={render}
-              version="weekly"
-              region="TW"
-              language="zh-TW"
-            >
-              <PoopMap poops={getVisiblePoops()} onPoopClick={handlePoopClick} />
-            </Wrapper>
+        /* 主地圖區域 - 全螢幕 */
+        <div className="h-full relative">
+          {/* 可見性篩選器 - 調整位置避免覆蓋標題 */}
+          <div className="absolute top-16 left-4 z-20">
+            <PoopVisibilityFilter
+              currentFilter={poopVisibilityFilter}
+              onFilterChange={handleFilterChange}
+              counts={getPoopCounts()}
+            />
           </div>
-
-          {/* 社交統計側邊欄 - 只在大螢幕顯示 */}
-          <div className="w-80 bg-gray-50 border-l border-gray-200 overflow-y-auto hidden xl:block">
-            <div className="p-4 space-y-4">
-              <SocialStatsPanel
-                user={user}
-                friends={friends}
-                poops={poops}
-                userInventory={userInventory}
-              />
-              
-              {/* 快速操作面板 */}
-              <div className="bg-white rounded-lg shadow p-4">
-                <h3 className="font-bold text-gray-800 mb-3">🚀 快速操作</h3>
-                <div className="space-y-2">
-                  <button
-                    onClick={() => setShowChallenges(true)}
-                    className="w-full py-2 px-3 bg-purple-100 text-purple-700 rounded-lg text-sm font-medium hover:bg-purple-200 transition-colors flex items-center"
-                  >
-                    <span className="mr-2">🎯</span>
-                    查看挑戰
-                  </button>
-                  <button
-                    onClick={() => setShowLeaderboard(true)}
-                    className="w-full py-2 px-3 bg-yellow-100 text-yellow-700 rounded-lg text-sm font-medium hover:bg-yellow-200 transition-colors flex items-center"
-                  >
-                    <span className="mr-2">🏆</span>
-                    排行榜
-                  </button>
-                  <button
-                    onClick={() => setShowAchievements(true)}
-                    className="w-full py-2 px-3 bg-green-100 text-green-700 rounded-lg text-sm font-medium hover:bg-green-200 transition-colors flex items-center"
-                  >
-                    <span className="mr-2">🏅</span>
-                    我的成就
-                  </button>
-                  <button
-                    onClick={() => setShowFeed(true)}
-                    className="w-full py-2 px-3 bg-blue-100 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-200 transition-colors flex items-center"
-                  >
-                    <span className="mr-2">📰</span>
-                    動態牆
-                  </button>
-                </div>
-              </div>
-
-              {/* 在線好友 */}
-              {friends.length > 0 && (
-                <div className="bg-white rounded-lg shadow p-4">
-                  <h3 className="font-bold text-gray-800 mb-3">👥 好友動態</h3>
-                  <div className="space-y-2">
-                    {friends.slice(0, 5).map((friend) => (
-                      <div key={friend.email} className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <img
-                            src={friend.picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(friend.name)}&background=random&color=fff`}
-                            alt={friend.name}
-                            className="w-6 h-6 rounded-full mr-2"
-                          />
-                          <span className="text-sm text-gray-700">{friend.name}</span>
-                        </div>
-                        <span className="text-xs text-green-500">●</span>
-                      </div>
-                    ))}
-                    {friends.length > 5 && (
-                      <button
-                        onClick={() => setShowFriendsModal(true)}
-                        className="text-xs text-purple-600 hover:text-purple-800"
-                      >
-                        查看全部 {friends.length} 個好友
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
+          <Wrapper 
+            apiKey={apiKey} 
+            libraries={['marker']} 
+            render={render}
+            version="weekly"
+            region="TW"
+            language="zh-TW"
+          >
+            <PoopMap poops={getVisiblePoops()} onPoopClick={handlePoopClick} />
+          </Wrapper>
         </div>
       )}
 
