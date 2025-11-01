@@ -20,6 +20,7 @@ import { ChallengesModal } from './components/ChallengesModal';
 import { NotificationCenter } from './components/NotificationCenter';
 import { SocialStatsPanel } from './components/SocialStatsPanel';
 import { MobileQuickActions } from './components/MobileQuickActions';
+import { PoopVisibilityFilter, PoopVisibilityFilter as FilterType } from './components/PoopVisibilityFilter';
 
 import { PoopIcon, SpinnerIcon } from './components/icons';
 import { IconShowcase } from './components/IconShowcase';
@@ -44,8 +45,7 @@ import {
   subscribeToUserPoops,
   subscribeToFriendRequests,
   getCurrentDatabaseProvider,
-  removeFriend,
-  savePoopToCloud
+  removeFriend
 } from './services/unifiedDatabase';
 import { 
   getUserInventory, 
@@ -80,6 +80,11 @@ const App: React.FC = () => {
   const [showChallenges, setShowChallenges] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showSocialStats, setShowSocialStats] = useState(false);
+  const [poopVisibilityFilter, setPoopVisibilityFilter] = useState<FilterType>(() => {
+    // 從 localStorage 讀取用戶的篩選偏好
+    const saved = localStorage.getItem('poopVisibilityFilter');
+    return (saved as FilterType) || 'all';
+  });
   const [showDetailView, setShowDetailView] = useState(false);
   const [selectedPoop, setSelectedPoop] = useState<Poop | null>(null);
   const [selectedPoopNumber, setSelectedPoopNumber] = useState(0);
@@ -959,9 +964,10 @@ const App: React.FC = () => {
       
       // 重新載入好友便便數據
       if (updatedFriends.length > 0) {
-        loadFriendsPoops(updatedFriends.map(f => f.email));
+        loadFriendsPoops();
       } else {
-        setFriendsPoops([]);
+        // 清空好友便便數據
+        setAllPoops(prev => prev.filter(poop => poop.userId === user?.email));
       }
       
     } catch (error) {
@@ -1121,19 +1127,55 @@ const App: React.FC = () => {
   const getVisiblePoops = () => {
     if (!user?.email) return [];
 
-    return allPoops.filter(poop => {
-      // Always show own poops
-      if (poop.userId === user.email) return true;
+    const userPoops = poops.filter(poop => poop.userId === user.email);
+    const friendEmails = friends.map(f => f.email);
+    const friendPoops = allPoops.filter(poop => 
+      friendEmails.includes(poop.userId) && poop.privacy !== 'private'
+    );
+    const publicPoops = allPoops.filter(poop => 
+      poop.privacy === 'public' && poop.userId !== user.email && !friendEmails.includes(poop.userId)
+    );
+    
+    // 根據可見性篩選器返回不同的便便
+    switch (poopVisibilityFilter) {
+      case 'mine':
+        return userPoops;
+      case 'friends':
+        return friendPoops;
+      case 'public':
+        return publicPoops;
+      case 'all':
+      default:
+        return [...userPoops, ...friendPoops, ...publicPoops];
+    }
+  };
 
-      // Check privacy settings for others' poops
-      if (poop.privacy === 'private') return false;
-      if (poop.privacy === 'public') return true;
-      if (poop.privacy === 'friends') {
-        return friends.some(friend => friend.email === poop.userId);
-      }
+  // 計算各類便便的數量
+  const getPoopCounts = () => {
+    if (!user?.email) return { mine: 0, friends: 0, public: 0, total: 0 };
+    
+    const userPoops = poops.filter(poop => poop.userId === user.email);
+    const friendEmails = friends.map(f => f.email);
+    const friendPoops = allPoops.filter(poop => 
+      friendEmails.includes(poop.userId) && poop.privacy !== 'private'
+    );
+    const publicPoops = allPoops.filter(poop => 
+      poop.privacy === 'public' && poop.userId !== user.email && !friendEmails.includes(poop.userId)
+    );
+    
+    return {
+      mine: userPoops.length,
+      friends: friendPoops.length,
+      public: publicPoops.length,
+      total: userPoops.length + friendPoops.length + publicPoops.length,
+    };
+  };
 
-      return false;
-    });
+  // 當篩選器改變時保存到 localStorage
+  const handleFilterChange = (filter: FilterType) => {
+    setPoopVisibilityFilter(filter);
+    localStorage.setItem('poopVisibilityFilter', filter);
+    console.log(`🔍 Poop visibility filter changed to: ${filter}`);
   };
 
   // Friend system funct
@@ -1334,7 +1376,15 @@ const App: React.FC = () => {
       ) : (
         <div className="flex h-full">
           {/* 主地圖區域 */}
-          <div className="flex-1 mobile-map-container">
+          <div className="flex-1 mobile-map-container relative">
+            {/* 可見性篩選器 */}
+            <div className="absolute top-4 left-4 z-20">
+              <PoopVisibilityFilter
+                currentFilter={poopVisibilityFilter}
+                onFilterChange={handleFilterChange}
+                counts={getPoopCounts()}
+              />
+            </div>
             <Wrapper 
               apiKey={apiKey} 
               libraries={['marker']} 
@@ -1441,11 +1491,11 @@ const App: React.FC = () => {
           <div className="grid grid-cols-2 gap-2 text-center">
             <div>
               <div className="text-lg font-bold text-purple-600">{poops.length}</div>
-              <div className="text-xs text-gray-600">總數</div>
+              <div className="text-xs text-gray-600">我的</div>
             </div>
             <div>
-              <div className="text-lg font-bold text-blue-600">{allPoops.length}</div>
-              <div className="text-xs text-gray-600">可見</div>
+              <div className="text-lg font-bold text-blue-600">{getVisiblePoops().length}</div>
+              <div className="text-xs text-gray-600">顯示中</div>
             </div>
           </div>
           <div className="flex justify-center mt-1">
@@ -1474,7 +1524,7 @@ const App: React.FC = () => {
           {poops.length > 0 && (
             <div className="text-xs text-gray-500 mt-1">
               <p>最新便便: {new Date(poops[poops.length - 1]?.timestamp).toLocaleTimeString()}</p>
-              <p>可見便便: {allPoops.length} 筆 (含好友)</p>
+              <p>顯示中: {getVisiblePoops().length} 筆 | 總計: {getPoopCounts().total} 筆</p>
             </div>
           )}
         </div>
