@@ -174,3 +174,110 @@
 .firework-burst {
   animation: fireworkBurst 1s ease-out forwards;
 }
+
+/* 醜萌動畫效果 */
+@keyframes cuteWiggle {
+  0%, 100% {
+    transform: rotate(-3deg);
+  }
+  50% {
+    transform: rotate(3deg);
+  }
+}
+
+@keyframes cuteBounce {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-10px) scale(1.1);
+  }
+}
+
+@keyframes cuteHeartBeat {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+}
+
+@keyframes cuteSparkle {
+  0% {
+    opacity: 0;
+    transform: scale(0) rotate(0deg);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1) rotate(180deg);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0) rotate(360deg);
+  }
+}
+
+@keyframes gradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes cuteFloat {
+  0%, 100% {
+    transform: translateY(0px) rotate(-2deg);
+  }
+  33% {
+    transform: translateY(-15px) rotate(1deg);
+  }
+  66% {
+    transform: translateY(-5px) rotate(-1deg);
+  }
+}
+
+@keyframes giggle {
+  0%, 100% {
+    transform: scale(1) rotate(0deg);
+  }
+  25% {
+    transform: scale(1.05) rotate(-1deg);
+  }
+  50% {
+    transform: scale(1.1) rotate(1deg);
+  }
+  75% {
+    transform: scale(1.05) rotate(-0.5deg);
+  }
+}
+
+/* 醜萌特效類別 */
+.cute-wiggle {
+  animation: cuteWiggle 1s ease-in-out infinite;
+}
+
+.cute-bounce {
+  animation: cuteBounce 0.8s ease-in-out infinite;
+}
+
+.cute-heart-beat {
+  animation: cuteHeartBeat 1.2s ease-in-out infinite;
+}
+
+.cute-sparkle {
+  animation: cuteSparkle 2s ease-in-out infinite;
+}
+
+.cute-float {
+  animation: cuteFloat 3s ease-in-out infinite;
+}
+
+.cute-giggle {
+  animation: giggle 0.6s ease-in-out infinite;
+}
