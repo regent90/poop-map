@@ -96,10 +96,10 @@ export const Header: React.FC<HeaderProps> = ({ user, onLogout, currentLang, onL
         <div className="flex items-center space-x-4">
           <LanguageSwitcher currentLang={currentLang} onLangChange={onLangChange} translations={translations} />
           
-          {/* Friends Button */}
+          {/* Friends Button - 只在桌面版顯示 */}
           <button
             onClick={onOpenFriends}
-            className="relative p-2 rounded-full hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-white"
+            className="relative p-2 rounded-full hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-white hidden md:block"
             aria-label={translations.friends}
           >
             <span className="text-2xl">👥</span>
@@ -110,10 +110,10 @@ export const Header: React.FC<HeaderProps> = ({ user, onLogout, currentLang, onL
             )}
           </button>
 
-          {/* Inventory Button */}
+          {/* Inventory Button - 只在桌面版顯示 */}
           <button
             onClick={onOpenInventory}
-            className="relative p-2 rounded-full hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-white"
+            className="relative p-2 rounded-full hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-white hidden md:block"
             aria-label="便便道具庫存"
           >
             <span className="text-2xl">🎒</span>
