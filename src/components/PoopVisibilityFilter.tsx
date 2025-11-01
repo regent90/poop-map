@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { MyPoopIcon, FriendPoopIcon, PublicPoopIcon } from './PoopIcons';
 
 export type PoopVisibilityFilter = 'all' | 'mine' | 'friends' | 'public';
 
@@ -39,30 +40,34 @@ export const PoopVisibilityFilter: React.FC<PoopVisibilityFilterProps> = ({
     {
       value: 'all' as const,
       label: '全部便便',
-      icon: '💩',
+      icon: '🌍',
       description: '顯示所有可見的便便',
-      color: 'text-amber-700'
+      color: 'text-gray-700',
+      component: null
     },
     {
       value: 'mine' as const,
       label: '我的便便',
-      icon: '🟤',
+      icon: null,
       description: '只顯示我的便便記錄',
-      color: 'text-purple-700'
+      color: 'text-amber-700',
+      component: <MyPoopIcon size={20} />
     },
     {
       value: 'friends' as const,
       label: '朋友便便',
-      icon: '🟫',
+      icon: null,
       description: '只顯示朋友的便便',
-      color: 'text-blue-700'
+      color: 'text-green-700',
+      component: <FriendPoopIcon size={20} />
     },
     {
       value: 'public' as const,
       label: '公開便便',
-      icon: '🤎',
+      icon: null,
       description: '只顯示公開的便便',
-      color: 'text-green-700'
+      color: 'text-purple-700',
+      component: <PublicPoopIcon size={20} />
     },
   ];
 
@@ -80,7 +85,13 @@ export const PoopVisibilityFilter: React.FC<PoopVisibilityFilterProps> = ({
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center space-x-2 bg-white/90 backdrop-blur-sm px-3 py-2 rounded-lg shadow-lg border border-gray-200 hover:bg-white transition-colors"
       >
-        <span className="text-xl">{currentOption?.icon}</span>
+        <div className="flex items-center justify-center w-5 h-5">
+          {currentOption?.component ? (
+            currentOption.component
+          ) : (
+            <span className="text-lg">{currentOption?.icon}</span>
+          )}
+        </div>
         <div className="text-left hidden sm:block">
           <div className="text-sm font-medium text-gray-800">
             {currentOption?.label}
@@ -113,7 +124,13 @@ export const PoopVisibilityFilter: React.FC<PoopVisibilityFilterProps> = ({
                   currentFilter === option.value ? 'bg-amber-50 border-r-4 border-amber-500' : ''
                 }`}
               >
-                <span className="text-2xl mr-3">{option.icon}</span>
+                <div className="flex items-center justify-center w-8 h-8 mr-3">
+                  {option.component ? (
+                    React.cloneElement(option.component, { size: 24 })
+                  ) : (
+                    <span className="text-2xl">{option.icon}</span>
+                  )}
+                </div>
                 <div className="flex-1">
                   <span className={`text-sm font-medium ${
                     currentFilter === option.value ? 'text-amber-700' : 'text-gray-800'
