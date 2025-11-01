@@ -1,3 +1,176 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* 便便攻擊動畫效果 */
+@keyframes poopExplosion {
+  0% {
+    transform: scale(0) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    transform: scale(1.2) rotate(180deg);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1) rotate(360deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.8) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+@keyframes poopRain {
+  0% {
+    transform: translateY(-100vh) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+@keyframes poopTornado {
+  0% {
+    transform: rotate(0deg) scale(0.5);
+    opacity: 0.5;
+  }
+  50% {
+    transform: rotate(180deg) scale(1.5);
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(360deg) scale(0.5);
+    opacity: 0.5;
+  }
+}
+
+@keyframes goldenShimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes rainbowPulse {
+  0% {
+    filter: hue-rotate(0deg) brightness(1);
+  }
+  25% {
+    filter: hue-rotate(90deg) brightness(1.2);
+  }
+  50% {
+    filter: hue-rotate(180deg) brightness(1.5);
+  }
+  75% {
+    filter: hue-rotate(270deg) brightness(1.2);
+  }
+  100% {
+    filter: hue-rotate(360deg) brightness(1);
+  }
+}
+
+@keyframes screenShake {
+  0%, 100% {
+    transform: translate(0, 0);
+  }
+  10% {
+    transform: translate(-2px, -1px);
+  }
+  20% {
+    transform: translate(2px, 1px);
+  }
+  30% {
+    transform: translate(-1px, 2px);
+  }
+  40% {
+    transform: translate(1px, -2px);
+  }
+  50% {
+    transform: translate(-2px, 1px);
+  }
+  60% {
+    transform: translate(2px, -1px);
+  }
+  70% {
+    transform: translate(-1px, -2px);
+  }
+  80% {
+    transform: translate(1px, 2px);
+  }
+  90% {
+    transform: translate(-2px, -1px);
+  }
+}
+
+@keyframes particleTrail {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+}
+
+@keyframes fireworkBurst {
+  0% {
+    transform: scale(0);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+/* 便便攻擊特效類別 */
+.poop-explosion {
+  animation: poopExplosion 0.8s ease-out;
+}
+
+.poop-rain {
+  animation: poopRain 3s linear;
+}
+
+.poop-tornado {
+  animation: poopTornado 2s linear infinite;
+}
+
+.golden-shimmer {
+  background: linear-gradient(90deg, transparent, rgba(255, 215, 0, 0.8), transparent);
+  background-size: 200% 100%;
+  animation: goldenShimmer 1.5s infinite;
+}
+
+.rainbow-pulse {
+  animation: rainbowPulse 2s infinite;
+}
+
+.screen-shake {
+  animation: screenShake 0.5s ease-in-out;
+}
+
+.particle-trail {
+  animation: particleTrail 0.5s ease-out forwards;
+}
+
+.firework-burst {
+  animation: fireworkBurst 1s ease-out forwards;
+}

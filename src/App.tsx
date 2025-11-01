@@ -83,6 +83,12 @@ const App: React.FC = () => {
     const saved = localStorage.getItem('poopVisibilityFilter');
     return (saved as FilterType) || 'all';
   });
+  
+  // 音效設定
+  const [soundEnabled, setSoundEnabled] = useState(() => {
+    const saved = localStorage.getItem('soundEnabled');
+    return saved !== null ? JSON.parse(saved) : true;
+  });
   const [showDetailView, setShowDetailView] = useState(false);
   const [selectedPoop, setSelectedPoop] = useState<Poop | null>(null);
   const [selectedPoopNumber, setSelectedPoopNumber] = useState(0);
@@ -97,6 +103,12 @@ const App: React.FC = () => {
 
 
   const t: TranslationStrings = translations[lang];
+
+  // 初始化音效設定
+  useEffect(() => {
+    const { soundManager } = require('./utils/soundEffects');
+    soundManager.setEnabled(soundEnabled);
+  }, [soundEnabled]);
 
   // Clean up localStorage on app start
   // Check storage usage (for monitoring only, no deletion)
@@ -1173,6 +1185,16 @@ const App: React.FC = () => {
     setPoopVisibilityFilter(filter);
     localStorage.setItem('poopVisibilityFilter', filter);
     console.log(`🔍 Poop visibility filter changed to: ${filter}`);
+  };
+
+  // 音效設定改變處理
+  const handleSoundToggle = (enabled: boolean) => {
+    setSoundEnabled(enabled);
+    localStorage.setItem('soundEnabled', JSON.stringify(enabled));
+    // 更新音效管理器設定
+    const { soundManager } = require('./utils/soundEffects');
+    soundManager.setEnabled(enabled);
+    console.log(`🔊 Sound effects ${enabled ? 'enabled' : 'disabled'}`);
   };
 
   // Friend system funct
