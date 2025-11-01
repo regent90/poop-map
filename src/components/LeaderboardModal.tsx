@@ -6,6 +6,7 @@ interface LeaderboardModalProps {
   onClose: () => void;
   user: UserProfile | null;
   friends: any[];
+  poops: any[];
 }
 
 export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({
@@ -13,6 +14,7 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({
   onClose,
   user,
   friends,
+  poops,
 }) => {
   const [selectedPeriod, setSelectedPeriod] = useState<'weekly' | 'monthly' | 'allTime'>('weekly');
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
@@ -20,6 +22,11 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({
 
   // 計算真實排行榜數據
   const calculateRealLeaderboard = (): LeaderboardEntry[] => {
+    if (!user || !poops || !Array.isArray(poops)) {
+      console.log('Missing data for leaderboard:', { user: !!user, poops: !!poops, isArray: Array.isArray(poops) });
+      return [];
+    }
+
     const now = Date.now();
     const weekAgo = now - (7 * 24 * 60 * 60 * 1000);
     const monthAgo = now - (30 * 24 * 60 * 60 * 1000);
@@ -28,7 +35,10 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({
     const allUsers = [
       { email: user?.email || '', name: user?.name || 'You', picture: user?.picture },
       ...friends.map(f => ({ email: f.email, name: f.name, picture: f.picture }))
-    ];
+    ].filter(u => u.email); // 過濾掉沒有 email 的用戶
+
+    console.log('All users for leaderboard:', allUsers.length);
+    console.log('Total poops available:', poops.length);
 
     // 為每個用戶計算統計數據
     const leaderboardData = allUsers.map(u => {
@@ -45,6 +55,8 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({
       const lastPoopTime = userPoops.length > 0 
         ? Math.max(...userPoops.map(p => p.timestamp))
         : 0;
+
+      console.log(`User ${u.name}: ${totalPoops} total, ${weeklyPoops} weekly, ${monthlyPoops} monthly`);
 
       return {
         userId: u.email,
@@ -74,8 +86,21 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({
       }
     });
 
-    // 設置排名
-    return sortedData.map((entry, index) => ({ ...entry, rank: index + 1 }));
+    // 設置排名，只顯示有數據的用戶
+    const filteredData = sortedData.filter(entry => {
+      switch (selectedPeriod) {
+        case 'weekly':
+          return entry.weeklyPoops > 0;
+        case 'monthly':
+          return entry.monthlyPoops > 0;
+        case 'allTime':
+          return entry.totalPoops > 0;
+        default:
+          return entry.totalPoops > 0;
+      }
+    });
+
+    return filteredData.map((entry, index) => ({ ...entry, rank: index + 1 }));
   };
 
   useEffect(() => {
@@ -83,11 +108,13 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({
       setLoading(true);
       // 計算真實排行榜數據
       setTimeout(() => {
-        setLeaderboard(calculateRealLeaderboard());
+        const leaderboardData = calculateRealLeaderboard();
+        console.log('Leaderboard data:', leaderboardData);
+        setLeaderboard(leaderboardData);
         setLoading(false);
       }, 100);
     }
-  }, [isOpen, selectedPeriod, friends]);
+  }, [isOpen, selectedPeriod]);
 
   const getRankIcon = (rank: number) => {
     switch (rank) {

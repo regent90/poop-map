@@ -24,13 +24,20 @@ export const FeedModal: React.FC<FeedModalProps> = ({
   const generateRealActivities = (): FeedActivity[] => {
     const activities: FeedActivity[] = [];
     
+    if (!user || !poops) {
+      console.log('No user or poops data available');
+      return activities;
+    }
+    
     // 從便便記錄生成活動
     const allUsers = [user, ...friends].filter(Boolean);
-    const relevantPoops = poops.filter(poop => {
-      if (filter === 'me') return poop.userId === user?.email;
-      if (filter === 'friends') return poop.userId !== user?.email && friends.some(f => f.email === poop.userId);
-      return poop.userId === user?.email || friends.some(f => f.email === poop.userId);
-    });
+    
+    // 獲取所有相關的便便記錄（不在這裡過濾，讓 filteredActivities 處理）
+    const relevantPoops = poops.filter(poop => 
+      poop.userId === user?.email || friends.some(f => f.email === poop.userId)
+    );
+
+    console.log('Generating activities from poops:', relevantPoops.length);
 
     relevantPoops.forEach(poop => {
       const poopUser = allUsers.find(u => u?.email === poop.userId);
@@ -53,37 +60,57 @@ export const FeedModal: React.FC<FeedModalProps> = ({
       }
     });
 
-    // 從好友關係生成活動（簡化版本）
-    friends.forEach(friend => {
-      // 假設每個朋友都有一個添加時間
-      activities.push({
-        id: `friend_${friend.email}`,
-        userId: user?.email || '',
-        userEmail: user?.email || '',
-        userName: user?.name || 'You',
-        userPicture: user?.picture,
-        type: 'friend_added',
-        timestamp: friend.addedAt || Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000,
-        data: {
-          friendEmail: friend.email,
-          friendName: friend.name,
-        },
-        privacy: 'friends',
+    // 從好友關係生成活動（只生成一次，不重複）
+    if (activities.length === 0 || !activities.some(a => a.type === 'friend_added')) {
+      friends.forEach(friend => {
+        activities.push({
+          id: `friend_${friend.email}`,
+          userId: user?.email || '',
+          userEmail: user?.email || '',
+          userName: user?.name || 'You',
+          userPicture: user?.picture,
+          type: 'friend_added',
+          timestamp: friend.addedAt || Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000,
+          data: {
+            friendEmail: friend.email,
+            friendName: friend.name,
+          },
+          privacy: 'friends',
+        });
       });
-    });
+    }
 
+    console.log('Generated activities:', activities.length);
     return activities.sort((a, b) => b.timestamp - a.timestamp).slice(0, 50);
   };
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && !loading) {
       setLoading(true);
       setTimeout(() => {
         setActivities(generateRealActivities());
         setLoading(false);
       }, 100);
     }
-  }, [isOpen, friends, poops, user, filter]);
+  }, [isOpen]);
+
+  // 當篩選器改變時，重新過濾活動而不是重新生成
+  useEffect(() => {
+    if (activities.length > 0) {
+      // 篩選已有的活動，不重新生成
+      const filtered = activities.filter(activity => {
+        switch (filter) {
+          case 'friends':
+            return activity.userEmail !== user?.email;
+          case 'me':
+            return activity.userEmail === user?.email;
+          default:
+            return true;
+        }
+      });
+      // 不需要重新設置 activities，直接在 render 中過濾
+    }
+  }, [filter]);
 
   const getActivityIcon = (type: string) => {
     switch (type) {
@@ -144,16 +171,19 @@ export const FeedModal: React.FC<FeedModalProps> = ({
     return `${days} 天前`;
   };
 
-  const filteredActivities = activities.filter(activity => {
-    switch (filter) {
-      case 'friends':
-        return activity.userEmail !== user?.email;
-      case 'me':
-        return activity.userEmail === user?.email;
-      default:
-        return true;
-    }
-  });
+  // 使用 useMemo 來避免重複計算
+  const filteredActivities = React.useMemo(() => {
+    return activities.filter(activity => {
+      switch (filter) {
+        case 'friends':
+          return activity.userEmail !== user?.email;
+        case 'me':
+          return activity.userEmail === user?.email;
+        default:
+          return true;
+      }
+    });
+  }, [activities, filter, user?.email]);
 
   if (!isOpen) return null;
 

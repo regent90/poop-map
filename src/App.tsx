@@ -1584,6 +1584,7 @@ const App: React.FC = () => {
         onClose={() => setShowLeaderboard(false)}
         user={user}
         friends={friends}
+        poops={poops}
       />
 
       {/* Achievements Modal */}
