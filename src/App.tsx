@@ -19,6 +19,7 @@ import { FeedModal } from './components/FeedModal';
 import { ChallengesModal } from './components/ChallengesModal';
 import { NotificationCenter } from './components/NotificationCenter';
 import { SocialStatsPanel } from './components/SocialStatsPanel';
+import { MobileQuickActions } from './components/MobileQuickActions';
 
 import { PoopIcon, SpinnerIcon } from './components/icons';
 import { IconShowcase } from './components/IconShowcase';
@@ -1316,6 +1317,7 @@ const App: React.FC = () => {
           onOpenFeed={() => setShowFeed(true)}
           onOpenChallenges={() => setShowChallenges(true)}
           onOpenNotifications={() => setShowNotifications(true)}
+          unreadNotifications={3} // 這裡可以從實際數據獲取
         />
       </div>
 
@@ -1345,8 +1347,8 @@ const App: React.FC = () => {
             </Wrapper>
           </div>
 
-          {/* 社交統計側邊欄 */}
-          <div className="w-80 bg-gray-50 border-l border-gray-200 overflow-y-auto hidden lg:block">
+          {/* 社交統計側邊欄 - 只在大螢幕顯示 */}
+          <div className="w-80 bg-gray-50 border-l border-gray-200 overflow-y-auto hidden xl:block">
             <div className="p-4 space-y-4">
               <SocialStatsPanel
                 user={user}
@@ -1424,9 +1426,39 @@ const App: React.FC = () => {
         </div>
       )}
 
+      {/* 手機端快速操作按鈕 */}
+      <MobileQuickActions
+        onOpenInventory={() => setShowInventory(true)}
+        onOpenFriends={() => setShowFriendsModal(true)}
+        inventoryItemCount={userInventory?.items.length || 0}
+        friendsCount={friends.length}
+      />
+
       <div className="absolute mobile-stats-container z-10 text-right">
         {error && <p className="bg-red-500 text-white p-2 rounded-md mb-2">{error}</p>}
-        <div className="bg-white/80 backdrop-blur-sm p-3 rounded-lg shadow-lg">
+        {/* 手機版簡化統計 */}
+        <div className="bg-white/90 backdrop-blur-sm p-2 rounded-lg shadow-lg xl:hidden">
+          <div className="grid grid-cols-2 gap-2 text-center">
+            <div>
+              <div className="text-lg font-bold text-purple-600">{poops.length}</div>
+              <div className="text-xs text-gray-600">總數</div>
+            </div>
+            <div>
+              <div className="text-lg font-bold text-blue-600">{allPoops.length}</div>
+              <div className="text-xs text-gray-600">可見</div>
+            </div>
+          </div>
+          <div className="flex justify-center mt-1">
+            {useFirebase && firebaseReady ? (
+              <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">☁️</span>
+            ) : (
+              <span className="bg-gray-100 text-gray-800 px-2 py-1 rounded-full text-xs">💾</span>
+            )}
+          </div>
+        </div>
+        
+        {/* 桌面版詳細統計 */}
+        <div className="bg-white/80 backdrop-blur-sm p-3 rounded-lg shadow-lg hidden xl:block">
           <div className="flex items-center justify-between mb-2">
             <p className="font-bold text-gray-800">{t.totalDrops}: <span className="text-amber-800">{poops.length}</span></p>
             <div className="flex items-center space-x-1 text-xs">

@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { UserProfile, Language, TranslationStrings, Poop } from '../types';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { PoopIcon } from './icons';
+import { SocialMenu } from './SocialMenu';
 
 interface HeaderProps {
   user: UserProfile;
@@ -22,9 +23,10 @@ interface HeaderProps {
   onOpenFeed?: () => void;
   onOpenChallenges?: () => void;
   onOpenNotifications?: () => void;
+  unreadNotifications?: number;
 }
 
-export const Header: React.FC<HeaderProps> = ({ user, onLogout, currentLang, onLangChange, translations, poops, onViewPoopDetails, onOpenFriends, friendsCount = 0, onShowIconShowcase, onOpenInventory, inventoryItemCount = 0, onOpenLeaderboard, onOpenAchievements, onOpenFeed, onOpenChallenges, onOpenNotifications }) => {
+export const Header: React.FC<HeaderProps> = ({ user, onLogout, currentLang, onLangChange, translations, poops, onViewPoopDetails, onOpenFriends, friendsCount = 0, onShowIconShowcase, onOpenInventory, inventoryItemCount = 0, onOpenLeaderboard, onOpenAchievements, onOpenFeed, onOpenChallenges, onOpenNotifications, unreadNotifications = 0 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -132,54 +134,15 @@ export const Header: React.FC<HeaderProps> = ({ user, onLogout, currentLang, onL
             )}
           </button>
 
-          {/* Leaderboard Button */}
-          <button
-            onClick={onOpenLeaderboard}
-            className="relative p-2 rounded-full hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-white"
-            aria-label="排行榜"
-          >
-            <span className="text-2xl">🏆</span>
-          </button>
-
-          {/* Achievements Button */}
-          <button
-            onClick={onOpenAchievements}
-            className="relative p-2 rounded-full hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-white"
-            aria-label="成就系統"
-          >
-            <span className="text-2xl">🏅</span>
-          </button>
-
-          {/* Feed Button */}
-          <button
-            onClick={onOpenFeed}
-            className="relative p-2 rounded-full hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-white"
-            aria-label="動態牆"
-          >
-            <span className="text-2xl">📰</span>
-          </button>
-
-          {/* Challenges Button */}
-          <button
-            onClick={onOpenChallenges}
-            className="relative p-2 rounded-full hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-white"
-            aria-label="挑戰系統"
-          >
-            <span className="text-2xl">🎯</span>
-          </button>
-
-          {/* Notifications Button */}
-          <button
-            onClick={onOpenNotifications}
-            className="relative p-2 rounded-full hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-white"
-            aria-label="通知中心"
-          >
-            <span className="text-2xl">🔔</span>
-            {/* 未讀通知指示器 */}
-            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-              3
-            </span>
-          </button>
+          {/* Social Menu - 整合所有社交功能 */}
+          <SocialMenu
+            onOpenLeaderboard={onOpenLeaderboard}
+            onOpenAchievements={onOpenAchievements}
+            onOpenFeed={onOpenFeed}
+            onOpenChallenges={onOpenChallenges}
+            onOpenNotifications={onOpenNotifications}
+            unreadNotifications={unreadNotifications}
+          />
           
           <div className="relative" ref={menuRef}>
             <button onClick={() => setMenuOpen(!menuOpen)} className="flex items-center space-x-2 focus:outline-none">
