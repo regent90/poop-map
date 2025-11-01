@@ -1363,6 +1363,7 @@ const App: React.FC = () => {
               currentFilter={poopVisibilityFilter}
               onFilterChange={handleFilterChange}
               counts={getPoopCounts()}
+              translations={t}
             />
           </div>
           <Wrapper 
@@ -1386,51 +1387,12 @@ const App: React.FC = () => {
         friendsCount={friends.length}
       />
 
-      <div className="absolute mobile-stats-container z-10 text-right">
-        {error && <p className="bg-red-500 text-white p-2 rounded-md mb-2">{error}</p>}
-        {/* 手機版簡化統計 */}
-        <div className="bg-white/90 backdrop-blur-sm p-2 rounded-lg shadow-lg xl:hidden">
-          <div className="grid grid-cols-2 gap-2 text-center">
-            <div>
-              <div className="text-lg font-bold text-purple-600">{poops.length}</div>
-              <div className="text-xs text-gray-600">我的</div>
-            </div>
-            <div>
-              <div className="text-lg font-bold text-blue-600">{getVisiblePoops().length}</div>
-              <div className="text-xs text-gray-600">顯示中</div>
-            </div>
-          </div>
-          <div className="flex justify-center mt-1">
-            {useFirebase && firebaseReady ? (
-              <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">☁️</span>
-            ) : (
-              <span className="bg-gray-100 text-gray-800 px-2 py-1 rounded-full text-xs">💾</span>
-            )}
-          </div>
+      {/* 錯誤訊息顯示 */}
+      {error && (
+        <div className="absolute top-20 left-1/2 transform -translate-x-1/2 z-50">
+          <p className="bg-red-500 text-white p-3 rounded-lg shadow-lg">{error}</p>
         </div>
-        
-        {/* 桌面版詳細統計 */}
-        <div className="bg-white/80 backdrop-blur-sm p-3 rounded-lg shadow-lg hidden xl:block">
-          <div className="flex items-center justify-between mb-2">
-            <p className="font-bold text-gray-800">{t.totalDrops}: <span className="text-amber-800">{poops.length}</span></p>
-            <div className="flex items-center space-x-1 text-xs">
-              {useFirebase && firebaseReady ? (
-                <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full" title="使用雲端數據庫">☁️</span>
-              ) : (
-                <span className="bg-gray-100 text-gray-800 px-2 py-1 rounded-full" title="使用本地存儲">💾</span>
-              )}
-              {!isOnline && <span className="bg-red-100 text-red-800 px-2 py-1 rounded-full" title="離線模式">📱</span>}
-            </div>
-          </div>
-          {poops.length === 0 && <p className="text-sm text-gray-600">{t.noDropsYet}</p>}
-          {poops.length > 0 && (
-            <div className="text-xs text-gray-500 mt-1">
-              <p>最新便便: {new Date(poops[poops.length - 1]?.timestamp).toLocaleTimeString()}</p>
-              <p>顯示中: {getVisiblePoops().length} 筆 | 總計: {getPoopCounts().total} 筆</p>
-            </div>
-          )}
-        </div>
-      </div>
+      )}
 
       <div className="absolute mobile-bottom-button z-10 flex flex-col items-center space-y-2">
         <button

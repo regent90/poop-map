@@ -127,11 +127,23 @@ export interface TranslationStrings {
   likedBy: string;
   noComments: string;
   noLikes: string;
-  // 新增社交功能翻譯
+  // 便便可見性篩選器翻譯
+  allPoops: string;
+  myPoops: string;
+  friendPoops: string;
+  publicPoops: string;
+  poopVisibility: string;
+  selectPoopType: string;
+  showAllVisible: string;
+  showMyPoops: string;
+  showFriendPoops: string;
+  showPublicPoops: string;
+  switchVisibilityTip: string;
   leaderboard: string;
   achievements: string;
   feed: string;
   challenges: string;
+  notifications: string;
   statistics: string;
   weeklyStats: string;
   monthlyStats: string;
@@ -317,13 +329,14 @@ export interface PoopHotspot {
     userName: string;
     count: number;
   }[];
-}// 挑
-戰系統
+}
+
+// 挑戰系統
 export interface Challenge {
   id: string;
   title: string;
   description: string;
-  type: 'poop_count' | 'rating_streak' | 'friend_invite' | 'attack_count' | 'location_variety';
+  challengeType: 'poop_count' | 'rating_streak' | 'friend_invite' | 'attack_count' | 'location_variety';
   target: number; // 目標數量
   duration: number; // 持續時間 (毫秒)
   createdBy: string;

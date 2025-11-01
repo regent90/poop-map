@@ -12,12 +12,14 @@ interface PoopVisibilityFilterProps {
     public: number;
     total: number;
   };
+  translations: any; // 添加翻譯支援
 }
 
 export const PoopVisibilityFilter: React.FC<PoopVisibilityFilterProps> = ({
   currentFilter,
   onFilterChange,
   counts,
+  translations,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -39,33 +41,33 @@ export const PoopVisibilityFilter: React.FC<PoopVisibilityFilterProps> = ({
   const filterOptions = [
     {
       value: 'all' as const,
-      label: '全部便便',
+      label: translations.allPoops,
       icon: '🌍',
-      description: '顯示所有可見的便便',
+      description: translations.showAllVisible,
       color: 'text-gray-700',
       component: null
     },
     {
       value: 'mine' as const,
-      label: '我的便便',
+      label: translations.myPoops,
       icon: null,
-      description: '只顯示我的便便記錄',
+      description: translations.showMyPoops,
       color: 'text-amber-700',
       component: <MyPoopIcon size={20} />
     },
     {
       value: 'friends' as const,
-      label: '朋友便便',
+      label: translations.friendPoops,
       icon: null,
-      description: '只顯示朋友的便便',
+      description: translations.showFriendPoops,
       color: 'text-green-700',
       component: <FriendPoopIcon size={20} />
     },
     {
       value: 'public' as const,
-      label: '公開便便',
+      label: translations.publicPoops,
       icon: null,
-      description: '只顯示公開的便便',
+      description: translations.showPublicPoops,
       color: 'text-purple-700',
       component: <PublicPoopIcon size={20} />
     },
@@ -112,8 +114,8 @@ export const PoopVisibilityFilter: React.FC<PoopVisibilityFilterProps> = ({
         <div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-200 z-50 overflow-hidden">
           <div className="py-2">
             <div className="px-4 py-2 border-b border-gray-100">
-              <h3 className="text-sm font-semibold text-gray-800">便便可見性</h3>
-              <p className="text-xs text-gray-500">選擇要顯示的便便類型</p>
+              <h3 className="text-sm font-semibold text-gray-800">{translations.poopVisibility}</h3>
+              <p className="text-xs text-gray-500">{translations.selectPoopType}</p>
             </div>
             
             {filterOptions.map((option) => (
@@ -152,7 +154,7 @@ export const PoopVisibilityFilter: React.FC<PoopVisibilityFilterProps> = ({
           {/* 底部提示 */}
           <div className="px-4 py-2 bg-gray-50 border-t border-gray-100">
             <p className="text-xs text-gray-500 text-center">
-              💡 切換可見性來減少地圖上的便便數量
+              💡 {translations.switchVisibilityTip}
             </p>
           </div>
         </div>
