@@ -23,9 +23,7 @@ import { MobileQuickActions } from './components/MobileQuickActions';
 import { PoopVisibilityFilter, PoopVisibilityFilter as FilterType } from './components/PoopVisibilityFilter';
 
 import { PoopIcon, SpinnerIcon } from './components/icons';
-import { IconShowcase } from './components/IconShowcase';
-import { DatabaseDebugger } from './components/DatabaseDebugger';
-import { DatabaseDebugPanel } from './components/DatabaseDebugPanel';
+
 import { ApiUsageMonitor } from './components/ApiUsageMonitor';
 import { Wrapper, Status } from "@googlemaps/react-wrapper";
 // Firebase imports
@@ -96,8 +94,7 @@ const App: React.FC = () => {
   const [useFirebase, setUseFirebase] = useState(true); // Toggle between Firebase and localStorage
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [firebaseReady, setFirebaseReady] = useState(false);
-  const [showIconShowcase, setShowIconShowcase] = useState(false);
-  const [showDebugger, setShowDebugger] = useState(false);
+
 
   const t: TranslationStrings = translations[lang];
 
@@ -1318,22 +1315,7 @@ const App: React.FC = () => {
     );
   }
 
-  // Show icon showcase if requested
-  if (showIconShowcase) {
-    return (
-      <div className="relative h-screen w-screen">
-        <div className="absolute top-4 left-4 z-10">
-          <button
-            onClick={() => setShowIconShowcase(false)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            ← 返回地圖
-          </button>
-        </div>
-        <IconShowcase />
-      </div>
-    );
-  }
+
 
   // Main app for logged in users
   return (
@@ -1351,7 +1333,6 @@ const App: React.FC = () => {
           onViewPoopDetails={handleViewPoopDetails}
           onOpenFriends={() => setShowFriendsModal(true)}
           friendsCount={friends.length}
-          onShowIconShowcase={() => setShowIconShowcase(true)}
           onOpenInventory={() => setShowInventory(true)}
           inventoryItemCount={userInventory?.items.length || 0}
           onOpenLeaderboard={() => setShowLeaderboard(true)}
@@ -1561,25 +1542,8 @@ const App: React.FC = () => {
         translations={t}
       />
 
-      {/* Database Debugger */}
-      {showDebugger && (
-        <div className="space-y-4">
-          <DatabaseDebugger />
-          <DatabaseDebugPanel />
-        </div>
-      )}
-
       {/* API Usage Monitor (開發模式) */}
       <ApiUsageMonitor />
-
-      {/* Debug Toggle Button */}
-      <button
-        onClick={() => setShowDebugger(!showDebugger)}
-        className="fixed mobile-bottom-right-button bg-gray-600 text-white p-2 rounded-full shadow-lg hover:bg-gray-700 z-40"
-        title="數據庫調試器"
-      >
-        🔍
-      </button>
 
       {/* Leaderboard Modal */}
       <LeaderboardModal

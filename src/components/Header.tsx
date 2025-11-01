@@ -15,7 +15,7 @@ interface HeaderProps {
   onViewPoopDetails?: (poop: Poop, poopNumber: number) => void;
   onOpenFriends?: () => void;
   friendsCount?: number;
-  onShowIconShowcase?: () => void;
+
   onOpenInventory?: () => void;
   inventoryItemCount?: number;
   onOpenLeaderboard?: () => void;
@@ -26,7 +26,7 @@ interface HeaderProps {
   unreadNotifications?: number;
 }
 
-export const Header: React.FC<HeaderProps> = ({ user, onLogout, currentLang, onLangChange, translations, poops, onViewPoopDetails, onOpenFriends, friendsCount = 0, onShowIconShowcase, onOpenInventory, inventoryItemCount = 0, onOpenLeaderboard, onOpenAchievements, onOpenFeed, onOpenChallenges, onOpenNotifications, unreadNotifications = 0 }) => {
+export const Header: React.FC<HeaderProps> = ({ user, onLogout, currentLang, onLangChange, translations, poops, onViewPoopDetails, onOpenFriends, friendsCount = 0, onOpenInventory, inventoryItemCount = 0, onOpenLeaderboard, onOpenAchievements, onOpenFeed, onOpenChallenges, onOpenNotifications, unreadNotifications = 0 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -96,16 +96,6 @@ export const Header: React.FC<HeaderProps> = ({ user, onLogout, currentLang, onL
         <div className="flex items-center space-x-4">
           <LanguageSwitcher currentLang={currentLang} onLangChange={onLangChange} translations={translations} />
           
-          {/* Icon Showcase Button */}
-          <button
-            onClick={onShowIconShowcase}
-            className="p-2 rounded-full hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-white"
-            aria-label="圖標展示"
-            title="查看便便圖標設計"
-          >
-            <span className="text-2xl">🎨</span>
-          </button>
-
           {/* Friends Button */}
           <button
             onClick={onOpenFriends}
