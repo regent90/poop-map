@@ -1,12 +1,43 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-TW">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/poop-icon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Poop Map - Track Your Drops</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>便便地圖 - Poop Map</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <meta name="description" content="Track and share your poop drops on an interactive map" />
+    <meta name="description" content="記錄和分享你的便便位置的有趣地圖應用" />
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json" />
+    
+    <!-- PWA Icons -->
+    <link rel="icon" type="image/webp" sizes="48x48" href="/icons/icon-48.webp" />
+    <link rel="icon" type="image/webp" sizes="72x72" href="/icons/icon-72.webp" />
+    <link rel="icon" type="image/webp" sizes="96x96" href="/icons/icon-96.webp" />
+    <link rel="icon" type="image/webp" sizes="128x128" href="/icons/icon-128.webp" />
+    <link rel="icon" type="image/webp" sizes="192x192" href="/icons/icon-192.webp" />
+    <link rel="icon" type="image/webp" sizes="256x256" href="/icons/icon-256.webp" />
+    <link rel="icon" type="image/webp" sizes="512x512" href="/icons/icon-512.webp" />
+    
+    <!-- Apple Touch Icon -->
+    <link rel="apple-touch-icon" href="/icons/icon-192.webp" />
+    
+    <!-- Theme Colors -->
+    <meta name="theme-color" content="#10B981" />
+    <meta name="msapplication-TileColor" content="#10B981" />
+    
+    <!-- iOS Safari -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="便便地圖" />
+    
+    <!-- Android -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    
+    <!-- Capacitor -->
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="msapplication-tap-highlight" content="no" />
   </head>
   <body>
     <div id="root"></div>

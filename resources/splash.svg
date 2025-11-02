@@ -1,0 +1,49 @@
+<svg width="2732" height="2732" viewBox="0 0 2732 2732" xmlns="http://www.w3.org/2000/svg">
+  <!-- 背景漸變 -->
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#10B981;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#059669;stop-opacity:1" />
+    </radialGradient>
+  </defs>
+  
+  <rect width="2732" height="2732" fill="url(#bg)"/>
+  
+  <!-- 主要圖標 -->
+  <g transform="translate(1366, 1366)">
+    <!-- 便便圖標 -->
+    <ellipse cx="0" cy="40" rx="200" ry="130" fill="#8B4513"/>
+    <ellipse cx="0" cy="-40" rx="160" ry="110" fill="#8B4513"/>
+    <ellipse cx="0" cy="-120" rx="120" ry="90" fill="#8B4513"/>
+    
+    <!-- 便便高光 -->
+    <ellipse cx="-50" cy="-80" rx="30" ry="25" fill="#A0522D"/>
+    <ellipse cx="40" cy="0" rx="25" ry="20" fill="#A0522D"/>
+    
+    <!-- 眼睛 -->
+    <circle cx="-40" cy="-60" r="15" fill="white"/>
+    <circle cx="40" cy="-60" r="15" fill="white"/>
+    <circle cx="-40" cy="-60" r="8" fill="black"/>
+    <circle cx="40" cy="-60" r="8" fill="black"/>
+    
+    <!-- 嘴巴 -->
+    <ellipse cx="0" cy="-20" rx="25" ry="15" fill="#654321"/>
+    
+    <!-- 地圖標記 -->
+    <g transform="translate(0, 200)">
+      <path d="M0,-50 L-25,0 L25,0 Z" fill="#EF4444"/>
+      <circle cx="0" cy="-50" r="20" fill="#EF4444"/>
+      <circle cx="0" cy="-50" r="10" fill="white"/>
+    </g>
+  </g>
+  
+  <!-- 應用名稱 -->
+  <text x="1366" y="2000" text-anchor="middle" font-family="Arial, sans-serif" font-size="120" font-weight="bold" fill="white">便便地圖</text>
+  <text x="1366" y="2150" text-anchor="middle" font-family="Arial, sans-serif" font-size="60" fill="rgba(255,255,255,0.8)">Poop Map</text>
+  
+  <!-- 裝飾性元素 -->
+  <circle cx="400" cy="400" r="30" fill="rgba(255,255,255,0.2)"/>
+  <circle cx="2300" cy="600" r="25" fill="rgba(255,255,255,0.15)"/>
+  <circle cx="600" cy="2200" r="35" fill="rgba(255,255,255,0.2)"/>
+  <circle cx="2100" cy="2100" r="28" fill="rgba(255,255,255,0.18)"/>
+</svg>

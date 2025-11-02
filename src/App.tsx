@@ -4,6 +4,7 @@ import { UserProfile, Poop, Language, TranslationStrings, Friend, FriendRequest,
 import { initMobileViewportFix } from './utils/mobileViewport';
 import './styles/mobile-viewport.css';
 import { translations } from './constants';
+import { CapacitorService } from './services/capacitorService';
 import { PoopMap } from './components/PoopMap';
 import { Header } from './components/Header';
 import { LoginScreen } from './components/LoginScreen';
@@ -114,6 +115,14 @@ const App: React.FC = () => {
 
 
   const t: TranslationStrings = translations[lang];
+
+  // 初始化 Capacitor 應用
+  useEffect(() => {
+    const initCapacitor = async () => {
+      await CapacitorService.initializeApp();
+    };
+    initCapacitor();
+  }, []);
 
   // 初始化音效設定
   useEffect(() => {
