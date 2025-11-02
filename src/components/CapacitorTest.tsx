@@ -14,10 +14,16 @@ export const CapacitorTest: React.FC = () => {
   const testLocation = async () => {
     const pos = await CapacitorService.getCurrentPosition();
     setLocation(pos);
+    if (pos) {
+      alert(`位置獲取成功: ${pos.lat.toFixed(6)}, ${pos.lng.toFixed(6)}`);
+    } else {
+      alert('位置獲取失敗');
+    }
   };
 
   const testHaptics = async () => {
     await CapacitorService.hapticFeedback('medium');
+    alert('觸覺反饋測試完成');
   };
 
   const testShare = async () => {
@@ -32,17 +38,33 @@ export const CapacitorTest: React.FC = () => {
     const image = await CapacitorService.takePicture();
     if (image) {
       console.log('Photo taken:', image.substring(0, 50) + '...');
+      alert('照片拍攝成功！');
+    } else {
+      alert('照片拍攝失敗或取消');
     }
+  };
+
+  const testStatusBar = async () => {
+    await CapacitorService.setStatusBarStyle(true);
+    setTimeout(async () => {
+      await CapacitorService.setStatusBarStyle(false);
+    }, 2000);
+    alert('狀態欄樣式切換測試完成');
+  };
+
+  const testKeyboard = async () => {
+    await CapacitorService.hideKeyboard();
+    alert('鍵盤隱藏測試完成');
   };
 
   if (!isNative) {
     return (
-      <div className=\"p-4 bg-blue-100 rounded-lg m-4\">
-        <h3 className=\"font-bold text-lg mb-2\">Capacitor 測試面板</h3>
-        <p className=\"text-sm text-gray-600 mb-4\">
+      <div className="p-4 bg-blue-100 rounded-lg m-4">
+        <h3 className="font-bold text-lg mb-2">Capacitor 測試面板</h3>
+        <p className="text-sm text-gray-600 mb-4">
           當前平台: {platform} (Web 環境)
         </p>
-        <p className=\"text-sm text-yellow-600\">
+        <p className="text-sm text-yellow-600">
           某些功能僅在原生應用中可用
         </p>
       </div>
@@ -50,45 +72,59 @@ export const CapacitorTest: React.FC = () => {
   }
 
   return (
-    <div className=\"p-4 bg-green-100 rounded-lg m-4\">
-      <h3 className=\"font-bold text-lg mb-2\">Capacitor 測試面板</h3>
-      <p className=\"text-sm text-gray-600 mb-4\">
+    <div className="p-4 bg-green-100 rounded-lg m-4">
+      <h3 className="font-bold text-lg mb-2">Capacitor 測試面板</h3>
+      <p className="text-sm text-gray-600 mb-4">
         當前平台: {platform} (原生應用)
       </p>
       
-      <div className=\"space-y-2\">
+      <div className="space-y-2">
         <button
           onClick={testLocation}
-          className=\"w-full p-2 bg-blue-500 text-white rounded hover:bg-blue-600\"
+          className="w-full p-2 bg-blue-500 text-white rounded hover:bg-blue-600"
         >
           測試定位服務
         </button>
         
         <button
           onClick={testHaptics}
-          className=\"w-full p-2 bg-purple-500 text-white rounded hover:bg-purple-600\"
+          className="w-full p-2 bg-purple-500 text-white rounded hover:bg-purple-600"
         >
           測試觸覺反饋
         </button>
         
         <button
           onClick={testShare}
-          className=\"w-full p-2 bg-green-500 text-white rounded hover:bg-green-600\"
+          className="w-full p-2 bg-green-500 text-white rounded hover:bg-green-600"
         >
           測試分享功能
         </button>
         
         <button
           onClick={testCamera}
-          className=\"w-full p-2 bg-red-500 text-white rounded hover:bg-red-600\"
+          className="w-full p-2 bg-red-500 text-white rounded hover:bg-red-600"
         >
           測試相機功能
+        </button>
+        
+        <button
+          onClick={testStatusBar}
+          className="w-full p-2 bg-indigo-500 text-white rounded hover:bg-indigo-600"
+        >
+          測試狀態欄切換
+        </button>
+        
+        <button
+          onClick={testKeyboard}
+          className="w-full p-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+        >
+          隱藏鍵盤
         </button>
       </div>
       
       {location && (
-        <div className=\"mt-4 p-2 bg-white rounded\">
-          <p className=\"text-sm\">
+        <div className="mt-4 p-2 bg-white rounded">
+          <p className="text-sm">
             位置: {location.lat.toFixed(6)}, {location.lng.toFixed(6)}
           </p>
         </div>

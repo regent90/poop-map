@@ -22,6 +22,7 @@ import { NotificationCenter } from './components/NotificationCenter';
 import { SocialStatsPanel } from './components/SocialStatsPanel';
 import { MobileQuickActions } from './components/MobileQuickActions';
 import { PoopVisibilityFilter, PoopVisibilityFilter as FilterType } from './components/PoopVisibilityFilter';
+import { CapacitorTest } from './components/CapacitorTest';
 
 import { PoopIcon, SpinnerIcon } from './components/icons';
 
@@ -1613,6 +1614,9 @@ const App: React.FC = () => {
         user={user}
         translations={t}
       />
+
+      {/* Capacitor Test Component - 僅在開發模式顯示 */}
+      {import.meta.env.DEV && <CapacitorTest />}
     </div>
   );
 };
