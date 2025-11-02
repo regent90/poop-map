@@ -68,7 +68,7 @@ export const MobileQuickActions: React.FC<MobileQuickActionsProps> = ({
       {/* 主按鈕 */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className={`w-14 h-14 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg flex items-center justify-center transition-all duration-300 border-2 border-white border-opacity-70 ${isExpanded ? 'rotate-45' : 'rotate-0'
+        className={`w-14 h-14 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg flex items-center justify-center transition-all duration-300 border-2 border-white border-opacity-40 ${isExpanded ? 'rotate-45' : 'rotate-0'
           }`}
       >
         <span className="text-2xl">
