@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { UserInventory, PoopItem, Friend } from '../types';
+import { UserInventory, PoopItem, Friend, TranslationStrings } from '../types';
 import { RARITY_COLORS, RARITY_NAMES } from '../config/poopItems';
 
 interface PoopInventoryProps {
@@ -7,6 +7,7 @@ interface PoopInventoryProps {
   friends: Friend[];
   onUseItem: (item: PoopItem, targetFriend: Friend, message?: string) => void;
   onClose: () => void;
+  translations: TranslationStrings;
 }
 
 export const PoopInventory: React.FC<PoopInventoryProps> = ({
@@ -14,6 +15,7 @@ export const PoopInventory: React.FC<PoopInventoryProps> = ({
   friends,
   onUseItem,
   onClose,
+  translations,
 }) => {
   const [selectedItem, setSelectedItem] = useState<PoopItem | null>(null);
   const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
@@ -59,7 +61,7 @@ export const PoopInventory: React.FC<PoopInventoryProps> = ({
       <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-gray-800">
-            💩 便便道具庫存
+            💩 {translations.poopItemInventory}
           </h2>
           <button
             onClick={onClose}
@@ -76,13 +78,13 @@ export const PoopInventory: React.FC<PoopInventoryProps> = ({
               <div className="text-2xl font-bold text-purple-600">
                 {inventory.totalPoops}
               </div>
-              <div className="text-sm text-gray-600">總便便數</div>
+              <div className="text-sm text-gray-600">{translations.totalPoopCount}</div>
             </div>
             <div>
               <div className="text-2xl font-bold text-blue-600">
                 {inventory.items.length}
               </div>
-              <div className="text-sm text-gray-600">道具數量</div>
+              <div className="text-sm text-gray-600">{translations.itemQuantity}</div>
             </div>
           </div>
         </div>
@@ -91,8 +93,8 @@ export const PoopInventory: React.FC<PoopInventoryProps> = ({
         {inventory.items.length === 0 ? (
           <div className="text-center py-8">
             <div className="text-6xl mb-4">🚽</div>
-            <p className="text-gray-500">還沒有任何道具</p>
-            <p className="text-sm text-gray-400">記錄便便來獲得道具吧！</p>
+            <p className="text-gray-500">{translations.noItemsYet}</p>
+            <p className="text-sm text-gray-400">{translations.recordPoopToGetItems}</p>
           </div>
         ) : (
           <div className="space-y-4">

@@ -1510,6 +1510,7 @@ const App: React.FC = () => {
           friends={friends}
           onUseItem={handleUsePoopItem}
           onClose={() => setShowInventory(false)}
+          translations={t}
         />
       )}
 

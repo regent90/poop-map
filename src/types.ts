@@ -150,6 +150,31 @@ export interface TranslationStrings {
   weeklyStats: string;
   monthlyStats: string;
   allTimeStats: string;
+  // Header 統計翻譯
+  today: string;
+  week: string;
+  total: string;
+  iconLegend: string;
+  myPoop: string;
+  friendPoop: string;
+  publicPoop: string;
+  poopHistory: string;
+  weeklyTrend: string;
+  // 社交菜單翻譯
+  socialFeatures: string;
+  selectFeature: string;
+  viewPoopRanking: string;
+  myAchievementProgress: string;
+  friendActivity: string;
+  participateInChallenges: string;
+  messageNotifications: string;
+  recordPoopToUnlock: string;
+  // 道具庫存翻譯
+  poopItemInventory: string;
+  totalPoopCount: string;
+  itemQuantity: string;
+  noItemsYet: string;
+  recordPoopToGetItems: string;
 }
 
 export type Translations = {

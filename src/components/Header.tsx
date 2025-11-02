@@ -145,6 +145,7 @@ export const Header: React.FC<HeaderProps> = ({ user, onLogout, currentLang, onL
             onOpenChallenges={onOpenChallenges}
             onOpenNotifications={onOpenNotifications}
             unreadNotifications={unreadNotifications}
+            translations={translations}
           />
           
           <div className="relative" ref={menuRef}>
@@ -178,39 +179,39 @@ export const Header: React.FC<HeaderProps> = ({ user, onLogout, currentLang, onL
                     <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
                       <div className="text-center">
                         <div className="font-medium text-gray-900">{getTodayCount()}</div>
-                        <div className="text-gray-500">{currentLang === 'zh-TW' ? '今天' : currentLang === 'zh-CN' ? '今天' : currentLang === 'ja' ? '今日' : currentLang === 'ko' ? '오늘' : currentLang === 'es' ? 'Hoy' : currentLang === 'fr' ? 'Aujourd\'hui' : currentLang === 'de' ? 'Heute' : 'Today'}</div>
+                        <div className="text-gray-500">{translations.today}</div>
                       </div>
                       <div className="text-center">
                         <div className="font-medium text-gray-900">{getWeekCount()}</div>
-                        <div className="text-gray-500">{currentLang === 'zh-TW' ? '本週' : currentLang === 'zh-CN' ? '本周' : currentLang === 'ja' ? '今週' : currentLang === 'ko' ? '이번 주' : currentLang === 'es' ? 'Semana' : currentLang === 'fr' ? 'Semaine' : currentLang === 'de' ? 'Woche' : 'Week'}</div>
+                        <div className="text-gray-500">{translations.week}</div>
                       </div>
                       <div className="text-center">
                         <div className="font-medium text-gray-900">{userPoops.length}</div>
-                        <div className="text-gray-500">{currentLang === 'zh-TW' ? '總計' : currentLang === 'zh-CN' ? '总计' : currentLang === 'ja' ? '合計' : currentLang === 'ko' ? '총계' : currentLang === 'es' ? 'Total' : currentLang === 'fr' ? 'Total' : currentLang === 'de' ? 'Gesamt' : 'Total'}</div>
+                        <div className="text-gray-500">{translations.total}</div>
                       </div>
                     </div>
                     
                     {/* Icon Legend */}
                     <div className="mt-3 pt-2 border-t border-gray-100">
-                      <div className="text-xs text-gray-600 mb-2 font-medium">圖標說明</div>
+                      <div className="text-xs text-gray-600 mb-2 font-medium">{translations.iconLegend}</div>
                       <div className="space-y-1 text-xs">
                         <div className="flex items-center gap-2">
                           <div className="w-4 h-4 bg-amber-400 rounded-full border border-amber-500 flex items-center justify-center">
                             <span className="text-xs">💩</span>
                           </div>
-                          <span className="text-gray-600">我的便便</span>
+                          <span className="text-gray-600">{translations.myPoop}</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <div className="w-4 h-4 bg-green-400 rounded-full border border-green-500 flex items-center justify-center">
                             <span className="text-xs">💩</span>
                           </div>
-                          <span className="text-gray-600">好友的便便</span>
+                          <span className="text-gray-600">{translations.friendPoop}</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <div className="w-4 h-4 bg-purple-400 rounded-full border border-purple-500 flex items-center justify-center">
                             <span className="text-xs">💩</span>
                           </div>
-                          <span className="text-gray-600">公開的便便</span>
+                          <span className="text-gray-600">{translations.publicPoop}</span>
                         </div>
                       </div>
                     </div>
@@ -301,7 +302,7 @@ export const Header: React.FC<HeaderProps> = ({ user, onLogout, currentLang, onL
                           {userPoops.length > 0 && (
                             <div className="mt-3 pt-2 border-t border-gray-100">
                               <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
-                                <span>{currentLang === 'zh-TW' ? '本週趨勢' : currentLang === 'zh-CN' ? '本周趋势' : currentLang === 'ja' ? '今週の傾向' : currentLang === 'ko' ? '이번 주 추세' : currentLang === 'es' ? 'Tendencia semanal' : currentLang === 'fr' ? 'Tendance hebdomadaire' : currentLang === 'de' ? 'Wochentrend' : 'Weekly trend'}</span>
+                                <span>{translations.weeklyTrend}</span>
                                 <span>{getWeeklyAverage().toFixed(1)}/day</span>
                               </div>
                               <div className="flex space-x-1">
