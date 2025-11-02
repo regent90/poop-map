@@ -46,6 +46,8 @@ import {
   removeFriend
 } from './services/unifiedDatabase';
 import { soundManager } from './utils/soundEffects';
+import { useMutation, useQuery } from 'convex/react';
+import { api } from '../convex/_generated/api';
 import { 
   getUserInventory, 
   awardPoopItem, 
@@ -57,6 +59,14 @@ import {
 
 const App: React.FC = () => {
   const [user, setUser] = useState<UserProfile | null>(null);
+  
+  // Convex mutations and queries
+  const getOrCreateUser = useMutation(api.users.getOrCreateUser);
+  
+  // 獲取當前用戶的顯示名稱
+  const currentUserDisplayName = useQuery(api.users.getUserDisplayName, 
+    user?.email ? { email: user.email } : "skip"
+  );
   const [poops, setPoops] = useState<Poop[]>([]);
   const [lang, setLang] = useState<Language>('en');
   const [isDropping, setIsDropping] = useState(false);
@@ -390,10 +400,19 @@ const App: React.FC = () => {
       const response = await fetch(`https://www.googleapis.com/oauth2/v2/userinfo?access_token=${tokenResponse.access_token}`);
       const userInfo = await response.json();
 
+      // 在 Convex 中獲取或創建用戶
+      const convexUser = await getOrCreateUser({
+        email: userInfo.email,
+        name: userInfo.name,
+        picture: userInfo.picture,
+      });
+
       const userData: UserProfile = {
         name: userInfo.name,
+        displayName: convexUser?.displayName,
         email: userInfo.email,
         picture: userInfo.picture,
+        hasChangedName: convexUser?.hasChangedName,
       };
 
       setUser(userData);
@@ -770,7 +789,7 @@ const App: React.FC = () => {
     const newRequest: FriendRequest = {
       id: Date.now().toString(),
       fromUserId: user.email,
-      fromUserName: user.name || 'Unknown',
+      fromUserName: currentUserDisplayName || user.name || 'Unknown',
       fromUserEmail: user.email,
       fromUserPicture: user.picture,
       toUserEmail: email,
@@ -1003,7 +1022,7 @@ const App: React.FC = () => {
     try {
       const success = await usePoopItem(
         user.email,
-        user.name || 'Unknown',
+        currentUserDisplayName || user.name || 'Unknown',
         user.email,
         user.picture,
         targetFriend.email,

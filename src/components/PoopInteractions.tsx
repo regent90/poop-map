@@ -23,6 +23,11 @@ export const PoopInteractions: React.FC<PoopInteractionsProps> = ({
   translations: t,
   isVisible
 }) => {
+  // 獲取當前用戶的顯示名稱
+  const currentUserDisplayName = useQuery(api.users.getUserDisplayName, 
+    currentUser?.email ? { email: currentUser.email } : "skip"
+  );
+
   // 使用 Convex 即時查詢
   const likes = useQuery(api.interactions.getLikes, 
     isVisible ? { poopId: poop.id as Id<"poops"> } : "skip"
@@ -65,7 +70,7 @@ export const PoopInteractions: React.FC<PoopInteractionsProps> = ({
           poop.id,
           currentUser.email,
           currentUser.email,
-          currentUser.name || 'Unknown',
+          currentUserDisplayName || currentUser.name || 'Unknown',
           currentUser.picture
         );
         console.log(`👍 Like added for poop ${poop.id}`);
@@ -88,7 +93,7 @@ export const PoopInteractions: React.FC<PoopInteractionsProps> = ({
         poop.id,
         currentUser.email,
         currentUser.email,
-        currentUser.name || 'Unknown',
+        currentUserDisplayName || currentUser.name || 'Unknown',
         newComment.trim(),
         currentUser.picture
       );

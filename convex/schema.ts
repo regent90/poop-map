@@ -2,6 +2,18 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
+  // 用戶表
+  users: defineTable({
+    email: v.string(),
+    name: v.optional(v.string()),
+    displayName: v.optional(v.string()), // 用戶自定義顯示名稱
+    picture: v.optional(v.string()),
+    hasChangedName: v.optional(v.boolean()), // 是否已經使用過免費改名機會
+    createdAt: v.number(),
+    lastLoginAt: v.number(),
+  })
+    .index("by_email", ["email"]),
+
   // 便便表
   poops: defineTable({
     userId: v.string(),

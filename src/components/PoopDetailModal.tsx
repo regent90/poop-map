@@ -1,6 +1,8 @@
 import React from 'react';
 import { Poop, UserProfile, TranslationStrings } from '../types';
 import { PoopInteractions } from './PoopInteractions';
+import { useQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 
 interface PoopDetailModalProps {
   isOpen: boolean;
@@ -17,6 +19,11 @@ export const PoopDetailModal: React.FC<PoopDetailModalProps> = ({
   currentUser,
   translations: t
 }) => {
+  // 獲取便便作者的顯示名稱
+  const poopAuthorDisplayName = useQuery(api.users.getUserDisplayName, 
+    poop ? { email: poop.userId } : "skip"
+  );
+
   if (!isOpen || !poop) return null;
 
   const date = new Date(poop.timestamp);
@@ -54,7 +61,9 @@ export const PoopDetailModal: React.FC<PoopDetailModalProps> = ({
           {/* User info (if not own poop) */}
           {!isOwnPoop && (
             <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-              <p className="text-sm text-gray-600">👤 {poop.userId}</p>
+              <p className="text-sm text-gray-600">
+                👤 {poopAuthorDisplayName || poop.userId}
+              </p>
             </div>
           )}
 

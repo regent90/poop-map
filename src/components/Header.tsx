@@ -4,6 +4,9 @@ import { UserProfile, Language, TranslationStrings, Poop } from '../types';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { PoopIcon } from './icons';
 import { SocialMenu } from './SocialMenu';
+import { DisplayNameEditor } from './DisplayNameEditor';
+import { useQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 
 interface HeaderProps {
   user: UserProfile;
@@ -28,7 +31,16 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ user, onLogout, currentLang, onLangChange, translations, poops, onViewPoopDetails, onOpenFriends, friendsCount = 0, onOpenInventory, inventoryItemCount = 0, onOpenLeaderboard, onOpenAchievements, onOpenFeed, onOpenChallenges, onOpenNotifications, unreadNotifications = 0 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [showDisplayNameEditor, setShowDisplayNameEditor] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // 獲取用戶顯示名稱
+  const userDisplayName = useQuery(api.users.getUserDisplayName, 
+    user?.email ? { email: user.email } : "skip"
+  );
+  const canChangeDisplayName = useQuery(api.users.canChangeDisplayName, 
+    user?.email ? { email: user.email } : "skip"
+  );
 
   // Statistics functions - only count user's own poops
   const userPoops = poops.filter(poop => poop.userId === user.email);
@@ -87,6 +99,7 @@ export const Header: React.FC<HeaderProps> = ({ user, onLogout, currentLang, onL
   };
 
   return (
+    <>
     <header className="absolute top-0 left-0 right-0 bg-gray-800 text-white shadow-md z-10">
       <div className="container mx-auto px-4 py-2 flex justify-between items-center">
         <div className="flex items-center space-x-2">
@@ -150,7 +163,18 @@ export const Header: React.FC<HeaderProps> = ({ user, onLogout, currentLang, onL
                 <div className="py-1">
                   <div className="px-4 py-2 border-b">
                     <p className="text-sm text-gray-700">{translations.welcome},</p>
-                    <p className="text-sm font-medium text-gray-900 truncate">{user.name}</p>
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {userDisplayName || user.name || user.email}
+                      </p>
+                      <button
+                        onClick={() => setShowDisplayNameEditor(true)}
+                        className="ml-2 text-xs text-purple-600 hover:text-purple-800 flex items-center"
+                        title={canChangeDisplayName ? "編輯顯示名稱" : "查看顯示名稱"}
+                      >
+                        {canChangeDisplayName ? '✏️' : '👁️'}
+                      </button>
+                    </div>
                     <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
                       <div className="text-center">
                         <div className="font-medium text-gray-900">{getTodayCount()}</div>
@@ -319,5 +343,19 @@ export const Header: React.FC<HeaderProps> = ({ user, onLogout, currentLang, onL
         </div>
       </div>
     </header>
+    
+    {/* 顯示名稱編輯器 */}
+    {showDisplayNameEditor && user?.email && (
+      <DisplayNameEditor
+        userEmail={user.email}
+        currentDisplayName={userDisplayName || user.name || user.email}
+        onClose={() => setShowDisplayNameEditor(false)}
+        onSuccess={(newDisplayName) => {
+          console.log(`✏️ Display name updated to: ${newDisplayName}`);
+          // 這裡可以添加成功提示
+        }}
+      />
+    )}
+  </>
   );
 };

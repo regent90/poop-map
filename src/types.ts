@@ -1,7 +1,9 @@
 export interface UserProfile {
   name?: string;
+  displayName?: string; // 用戶自定義顯示名稱
   picture?: string;
   email?: string;
+  hasChangedName?: boolean; // 是否已經使用過免費改名機會
 }
 
 export type PrivacyLevel = 'private' | 'friends' | 'public';
