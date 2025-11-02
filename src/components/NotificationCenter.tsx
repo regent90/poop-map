@@ -1,16 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { Notification, UserProfile } from '../types';
+import { Notification, UserProfile, TranslationStrings } from '../types';
 
 interface NotificationCenterProps {
   isOpen: boolean;
   onClose: () => void;
   user: UserProfile | null;
+  translations: TranslationStrings;
 }
 
 export const NotificationCenter: React.FC<NotificationCenterProps> = ({
   isOpen,
   onClose,
   user,
+  translations,
 }) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [filter, setFilter] = useState<'all' | 'unread' | 'social' | 'achievements'>('all');
@@ -99,10 +101,10 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
 
-    if (minutes < 1) return '剛剛';
-    if (minutes < 60) return `${minutes} 分鐘前`;
-    if (hours < 24) return `${hours} 小時前`;
-    return `${days} 天前`;
+    if (minutes < 1) return translations.justNow;
+    if (minutes < 60) return `${minutes} ${translations.minutesAgo}`;
+    if (hours < 24) return `${hours} ${translations.hoursAgo}`;
+    return `${days} ${translations.daysAgo}`;
   };
 
   const getPriorityColor = (priority: Notification['priority']) => {
@@ -156,9 +158,9 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
       <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h2 className="text-2xl font-bold text-gray-800">🔔 通知中心</h2>
+            <h2 className="text-2xl font-bold text-gray-800">🔔 {translations.notificationCenter}</h2>
             {unreadCount > 0 && (
-              <p className="text-sm text-gray-600">{unreadCount} 條未讀通知</p>
+              <p className="text-sm text-gray-600">{unreadCount} {translations.unreadNotifications}</p>
             )}
           </div>
           <button
@@ -182,9 +184,9 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
                     : 'text-gray-600 hover:text-gray-800'
                 }`}
               >
-                {filterType === 'all' ? '全部' : 
-                 filterType === 'unread' ? '未讀' :
-                 filterType === 'social' ? '社交' : '成就'}
+                {filterType === 'all' ? translations.all : 
+                 filterType === 'unread' ? translations.unread :
+                 filterType === 'social' ? translations.social : translations.achievements}
               </button>
             ))}
           </div>
@@ -194,7 +196,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
               onClick={handleMarkAllAsRead}
               className="text-sm text-purple-600 hover:text-purple-800"
             >
-              標記全部為已讀
+{translations.markAllAsRead}
             </button>
           )}
         </div>
@@ -203,9 +205,9 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
         {filteredNotifications.length === 0 ? (
           <div className="text-center py-8">
             <div className="text-6xl mb-4">📭</div>
-            <p className="text-gray-500">沒有通知</p>
+            <p className="text-gray-500">{translations.noNotifications}</p>
             <p className="text-sm text-gray-400">
-              {filter === 'unread' ? '所有通知都已讀取' : '暫時沒有新通知'}
+              {filter === 'unread' ? translations.allNotificationsRead : translations.noNewNotifications}
             </p>
           </div>
         ) : (
@@ -242,14 +244,14 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
                               onClick={() => handleMarkAsRead(notification.id)}
                               className="text-xs text-purple-600 hover:text-purple-800"
                             >
-                              標記已讀
+{translations.markAsRead}
                             </button>
                           )}
                           <button
                             onClick={() => handleDeleteNotification(notification.id)}
                             className="text-xs text-red-600 hover:text-red-800"
                           >
-                            刪除
+{translations.delete}
                           </button>
                         </div>
                       </div>
@@ -261,10 +263,10 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
                 {notification.type === 'friend_request' && (
                   <div className="mt-3 flex gap-2">
                     <button className="flex-1 py-2 px-3 bg-green-100 text-green-700 rounded text-sm font-medium hover:bg-green-200">
-                      接受
+                      {translations.accept}
                     </button>
                     <button className="flex-1 py-2 px-3 bg-red-100 text-red-700 rounded text-sm font-medium hover:bg-red-200">
-                      拒絕
+                      {translations.reject}
                     </button>
                   </div>
                 )}
@@ -272,7 +274,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
                 {notification.type === 'challenge_invite' && (
                   <div className="mt-3">
                     <button className="w-full py-2 px-3 bg-purple-100 text-purple-700 rounded text-sm font-medium hover:bg-purple-200">
-                      查看挑戰
+                      {translations.viewChallenge}
                     </button>
                   </div>
                 )}
@@ -280,7 +282,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
                 {notification.type === 'attack_received' && (
                   <div className="mt-3">
                     <button className="w-full py-2 px-3 bg-orange-100 text-orange-700 rounded text-sm font-medium hover:bg-orange-200">
-                      反擊
+                      {translations.counterAttack}
                     </button>
                   </div>
                 )}
@@ -292,7 +294,7 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
         {/* 設定按鈕 */}
         <div className="mt-6 pt-4 border-t">
           <button className="w-full py-2 px-3 bg-gray-100 text-gray-700 rounded text-sm font-medium hover:bg-gray-200">
-            ⚙️ 通知設定
+            ⚙️ {translations.notificationSettings}
           </button>
         </div>
       </div>

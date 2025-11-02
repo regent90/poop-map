@@ -175,6 +175,51 @@ export interface TranslationStrings {
   itemQuantity: string;
   noItemsYet: string;
   recordPoopToGetItems: string;
+  // 通知中心翻譯
+  notificationCenter: string;
+  unreadNotifications: string;
+  all: string;
+  unread: string;
+  social: string;
+  markAllAsRead: string;
+  noNotifications: string;
+  allNotificationsRead: string;
+  noNewNotifications: string;
+  markAsRead: string;
+  delete: string;
+  accept: string;
+  reject: string;
+  viewChallenge: string;
+  counterAttack: string;
+  notificationSettings: string;
+  justNow: string;
+  minutesAgo: string;
+  hoursAgo: string;
+  daysAgo: string;
+  // 挑戰系統翻譯
+  challengeSystem: string;
+  active: string;
+  completed: string;
+  createChallenge: string;
+  progress: string;
+  participants: string;
+  timeRemaining: string;
+  // 動態牆翻譯
+  activityFeed: string;
+  mine: string;
+  // 成就系統翻譯
+  achievementSystem: string;
+  unlocked: string;
+  totalAchievements: string;
+  totalPoints: string;
+  quantity: string;
+  quality: string;
+  special: string;
+  // 排行榜翻譯
+  poopLeaderboard: string;
+  thisWeek: string;
+  thisMonth: string;
+  allTime: string;
 }
 
 export type Translations = {
