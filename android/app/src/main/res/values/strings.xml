@@ -4,4 +4,5 @@
     <string name="title_activity_main">便便地圖</string>
     <string name="package_name">com.regent.poopmap</string>
     <string name="custom_url_scheme">com.regent.poopmap</string>
+    <string name="server_client_id">960272040462-l9ok0pdikok8c4fied49j6kbee4ruurg.apps.googleusercontent.com</string>
 </resources>

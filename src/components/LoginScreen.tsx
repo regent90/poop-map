@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useGoogleLogin } from '@react-oauth/google';
 import { PoopIcon } from './icons';
 import { TranslationStrings } from '../types';
+import { GoogleAuthService, GoogleUser } from '../services/googleAuthService';
+import { Capacitor } from '@capacitor/core';
 
 interface LoginScreenProps {
   onLoginSuccess: (tokenResponse: any) => void;
@@ -19,10 +21,53 @@ const GoogleIcon = () => (
 
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, translations }) => {
-  const login = useGoogleLogin({
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Web 平台的 Google 登入
+  const webLogin = useGoogleLogin({
     onSuccess: onLoginSuccess,
-    onError: (error) => console.log('Login Failed:', error)
+    onError: (error) => {
+      console.log('Web Login Failed:', error);
+      setError('登入失敗，請重試');
+    }
   });
+
+  // 統一的登入處理函數
+  const handleLogin = async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      if (Capacitor.isNativePlatform()) {
+        // 原生平台使用 Capacitor Google Auth
+        console.log('Using native Google Auth');
+        const user = await GoogleAuthService.signIn();
+        
+        if (user) {
+          // 轉換為與 Web 版本兼容的格式
+          const tokenResponse = {
+            access_token: user.accessToken,
+            token_type: 'Bearer',
+            expires_in: 3600,
+            scope: 'profile email',
+          };
+          
+          // 同時傳遞用戶信息
+          onLoginSuccess({ ...tokenResponse, user });
+        }
+      } else {
+        // Web 平台使用原有的 Google OAuth
+        console.log('Using web Google Auth');
+        webLogin();
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      setError('登入失敗，請檢查網路連接並重試');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-amber-50">
@@ -33,12 +78,27 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, transl
             {translations.welcome}! {translations.loginWithGoogle} to start.
         </p>
         <button
-          onClick={() => login()}
-          className="flex items-center justify-center w-full px-4 py-3 font-semibold text-gray-700 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors duration-200"
+          onClick={handleLogin}
+          disabled={isLoading}
+          className="flex items-center justify-center w-full px-4 py-3 font-semibold text-gray-700 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <GoogleIcon />
-          {translations.loginWithGoogle}
+          {isLoading ? (
+            <div className="w-5 h-5 mr-2 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
+          ) : (
+            <GoogleIcon />
+          )}
+          {isLoading ? '登入中...' : translations.loginWithGoogle}
         </button>
+        
+        {error && (
+          <div className="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+            {error}
+          </div>
+        )}
+        
+        <div className="mt-4 text-xs text-gray-500 text-center">
+          {Capacitor.isNativePlatform() ? '原生應用模式' : 'Web 應用模式'}
+        </div>
       </div>
     </div>
   );
