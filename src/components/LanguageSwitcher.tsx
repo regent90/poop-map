@@ -19,13 +19,18 @@ export const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({ currentLang,
         setIsOpen(false);
       }
     }
-    document.addEventListener("mousedown", handleClickOutside);
+    
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [wrapperRef]);
+  }, [isOpen]);
 
   const selectLanguage = (lang: Language) => {
+    console.log('🌍 Language selected:', lang);
     onLangChange(lang);
     setIsOpen(false);
   };
@@ -33,8 +38,10 @@ export const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({ currentLang,
   return (
     <div className="relative" ref={wrapperRef}>
       <button
-        onClick={() => setIsOpen(!isOpen)}
-        onBlur={() => setIsOpen(false)}
+        onClick={() => {
+          console.log('🌍 Language switcher clicked, current state:', isOpen);
+          setIsOpen(!isOpen);
+        }}
         className="flex items-center p-2 rounded-full hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-white"
         aria-label={translations.language}
       >
@@ -55,17 +62,17 @@ export const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({ currentLang,
             { code: 'fr', name: 'Français' },
             { code: 'de', name: 'Deutsch' },
           ].map((lang) => (
-            <a
+            <button
               key={lang.code}
-              href="#"
-              onClick={(e) => {
+              type="button"
+              onMouseDown={(e) => {
                 e.preventDefault();
                 selectLanguage(lang.code as any);
               }}
-              className={`block px-4 py-2 text-sm ${currentLang === lang.code ? 'bg-gray-100 text-gray-900' : 'text-gray-700'} hover:bg-gray-50`}
+              className={`w-full text-left block px-4 py-2 text-sm ${currentLang === lang.code ? 'bg-gray-100 text-gray-900' : 'text-gray-700'} hover:bg-gray-50`}
             >
               {lang.name}
-            </a>
+            </button>
           ))}
         </div>
       )}

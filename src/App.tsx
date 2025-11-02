@@ -314,8 +314,10 @@ const App: React.FC = () => {
   }, []);
 
   const handleLanguageChange = (newLang: Language) => {
+    console.log('🌍 App: Language change requested:', newLang);
     setLang(newLang);
     localStorage.setItem('poopMapLang', newLang);
+    console.log('🌍 App: Language changed to:', newLang);
   };
 
   const loadPoops = (userEmail?: string) => {
