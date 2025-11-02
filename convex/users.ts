@@ -59,13 +59,26 @@ export const updateDisplayName = mutation({
     displayName: v.string(),
   },
   handler: async (ctx, args) => {
-    const user = await ctx.db
+    let user = await ctx.db
       .query("users")
       .withIndex("by_email", (q) => q.eq("email", args.email))
       .first();
 
+    // 如果用戶不存在，先創建用戶記錄
     if (!user) {
-      throw new Error("用戶不存在");
+      console.log(`Creating user record for ${args.email} during display name update`);
+      const userId = await ctx.db.insert("users", {
+        email: args.email,
+        name: args.email.split('@')[0], // 使用 email 前綴作為預設名稱
+        displayName: args.email.split('@')[0],
+        hasChangedName: false,
+        createdAt: Date.now(),
+        lastLoginAt: Date.now(),
+      });
+      user = await ctx.db.get(userId);
+      if (!user) {
+        throw new Error("無法創建用戶記錄");
+      }
     }
 
     if (user.hasChangedName) {
@@ -153,6 +166,11 @@ export const canChangeDisplayName = query({
       .withIndex("by_email", (q) => q.eq("email", args.email))
       .first();
 
-    return !user?.hasChangedName;
+    // 如果用戶不存在，允許改名（會在改名時創建用戶記錄）
+    if (!user) {
+      return true;
+    }
+
+    return !user.hasChangedName;
   },
 });
