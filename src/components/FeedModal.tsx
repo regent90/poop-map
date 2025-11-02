@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FeedActivity, UserProfile } from '../types';
+import { FeedActivity, UserProfile, TranslationStrings } from '../types';
 
 interface FeedModalProps {
   isOpen: boolean;
@@ -7,6 +7,7 @@ interface FeedModalProps {
   user: UserProfile | null;
   friends: any[];
   poops: any[];
+  translations: TranslationStrings;
 }
 
 export const FeedModal: React.FC<FeedModalProps> = ({
@@ -15,6 +16,7 @@ export const FeedModal: React.FC<FeedModalProps> = ({
   user,
   friends,
   poops,
+  translations,
 }) => {
   const [activities, setActivities] = useState<FeedActivity[]>([]);
   const [loading, setLoading] = useState(false);
@@ -192,7 +194,7 @@ export const FeedModal: React.FC<FeedModalProps> = ({
       <div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4 max-h-[80vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-gray-800">
-            📰 動態牆
+            📰 {translations.activityFeed}
           </h2>
           <button
             onClick={onClose}
@@ -214,8 +216,8 @@ export const FeedModal: React.FC<FeedModalProps> = ({
                   : 'text-gray-600 hover:text-gray-800'
               }`}
             >
-              {filterType === 'all' ? '全部' : 
-               filterType === 'friends' ? '朋友' : '我的'}
+              {filterType === 'all' ? translations.all : 
+               filterType === 'friends' ? translations.friends : translations.mine}
             </button>
           ))}
         </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LeaderboardEntry, Leaderboard, UserProfile } from '../types';
+import { LeaderboardEntry, Leaderboard, UserProfile, TranslationStrings } from '../types';
 
 interface LeaderboardModalProps {
   isOpen: boolean;
@@ -7,6 +7,7 @@ interface LeaderboardModalProps {
   user: UserProfile | null;
   friends: any[];
   poops: any[];
+  translations: TranslationStrings;
 }
 
 export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({
@@ -15,6 +16,7 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({
   user,
   friends,
   poops,
+  translations,
 }) => {
   const [selectedPeriod, setSelectedPeriod] = useState<'weekly' | 'monthly' | 'allTime'>('weekly');
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
@@ -136,9 +138,9 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({
 
   const getPeriodLabel = (period: string) => {
     switch (period) {
-      case 'weekly': return '本週';
-      case 'monthly': return '本月';
-      case 'allTime': return '總計';
+      case 'weekly': return translations.thisWeek;
+      case 'monthly': return translations.thisMonth;
+      case 'allTime': return translations.allTime;
       default: return period;
     }
   };
@@ -159,7 +161,7 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({
       <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-gray-800">
-            🏆 便便排行榜
+            🏆 {translations.poopLeaderboard}
           </h2>
           <button
             onClick={onClose}
@@ -244,8 +246,8 @@ export const LeaderboardModal: React.FC<LeaderboardModalProps> = ({
                     {getPoopCount(entry)}
                   </div>
                   <div className="text-xs text-gray-500">
-                    {selectedPeriod === 'weekly' ? '本週' : 
-                     selectedPeriod === 'monthly' ? '本月' : '總計'}
+                    {selectedPeriod === 'weekly' ? translations.thisWeek : 
+                     selectedPeriod === 'monthly' ? translations.thisMonth : translations.allTime}
                   </div>
                 </div>
               </div>

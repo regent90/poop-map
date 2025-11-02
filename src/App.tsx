@@ -1565,6 +1565,7 @@ const App: React.FC = () => {
         user={user}
         friends={friends}
         poops={poops}
+        translations={t}
       />
 
       {/* Achievements Modal */}
@@ -1574,6 +1575,7 @@ const App: React.FC = () => {
         user={user}
         poops={poops}
         friends={friends}
+        translations={t}
       />
 
       {/* Feed Modal */}
@@ -1583,6 +1585,7 @@ const App: React.FC = () => {
         user={user}
         friends={friends}
         poops={poops}
+        translations={t}
       />
 
       {/* Challenges Modal */}
@@ -1591,6 +1594,7 @@ const App: React.FC = () => {
         onClose={() => setShowChallenges(false)}
         user={user}
         friends={friends}
+        translations={t}
       />
 
       {/* Notification Center */}
@@ -1598,6 +1602,7 @@ const App: React.FC = () => {
         isOpen={showNotifications}
         onClose={() => setShowNotifications(false)}
         user={user}
+        translations={t}
       />
     </div>
   );

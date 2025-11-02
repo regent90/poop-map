@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Challenge, UserProfile, Friend } from '../types';
+import { Challenge, UserProfile, Friend, TranslationStrings } from '../types';
 
 interface ChallengesModalProps {
   isOpen: boolean;
   onClose: () => void;
   user: UserProfile | null;
   friends: Friend[];
+  translations: TranslationStrings;
 }
 
 export const ChallengesModal: React.FC<ChallengesModalProps> = ({
@@ -13,6 +14,7 @@ export const ChallengesModal: React.FC<ChallengesModalProps> = ({
   onClose,
   user,
   friends,
+  translations,
 }) => {
   const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [selectedTab, setSelectedTab] = useState<'active' | 'completed' | 'create'>('active');
@@ -173,7 +175,7 @@ export const ChallengesModal: React.FC<ChallengesModalProps> = ({
       <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-gray-800">
-            🎯 挑戰系統
+            🎯 {translations.challengeSystem}
           </h2>
           <button
             onClick={onClose}
@@ -195,8 +197,8 @@ export const ChallengesModal: React.FC<ChallengesModalProps> = ({
                   : 'text-gray-600 hover:text-gray-800'
               }`}
             >
-              {tab === 'active' ? '進行中' : 
-               tab === 'completed' ? '已完成' : '創建挑戰'}
+              {tab === 'active' ? translations.active : 
+               tab === 'completed' ? translations.completed : translations.createChallenge}
             </button>
           ))}
         </div>
@@ -207,8 +209,8 @@ export const ChallengesModal: React.FC<ChallengesModalProps> = ({
             {activeChallenges.length === 0 ? (
               <div className="text-center py-8">
                 <div className="text-6xl mb-4">🎯</div>
-                <p className="text-gray-500">沒有進行中的挑戰</p>
-                <p className="text-sm text-gray-400">創建新挑戰來開始競爭吧！</p>
+                <p className="text-gray-500">沒有{translations.active}的挑戰</p>
+                <p className="text-sm text-gray-400">{translations.createChallenge}來開始競爭吧！</p>
               </div>
             ) : (
               activeChallenges.map((challenge) => (
@@ -222,14 +224,14 @@ export const ChallengesModal: React.FC<ChallengesModalProps> = ({
                       </div>
                     </div>
                     <span className="text-xs bg-green-100 text-green-600 px-2 py-1 rounded-full">
-                      進行中
+{translations.active}
                     </span>
                   </div>
 
                   {/* 進度條 */}
                   <div className="mb-3">
                     <div className="flex justify-between text-sm mb-1">
-                      <span>進度: {challenge.progress} / {challenge.target}</span>
+                      <span>{translations.progress}: {challenge.progress} / {challenge.target}</span>
                       <span>{getProgressPercentage(challenge).toFixed(0)}%</span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
@@ -242,11 +244,11 @@ export const ChallengesModal: React.FC<ChallengesModalProps> = ({
 
                   <div className="flex justify-between items-center text-sm">
                     <div>
-                      <span className="text-gray-600">參與者: </span>
+                      <span className="text-gray-600">{translations.participants}: </span>
                       <span className="font-medium">{challenge.participants.length} 人</span>
                     </div>
                     <div>
-                      <span className="text-gray-600">剩餘時間: </span>
+                      <span className="text-gray-600">{translations.timeRemaining}: </span>
                       <span className="font-medium text-orange-600">
                         {getTimeRemaining(challenge.endTime)}
                       </span>
@@ -279,7 +281,7 @@ export const ChallengesModal: React.FC<ChallengesModalProps> = ({
                       </div>
                     </div>
                     <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
-                      已完成
+{translations.completed}
                     </span>
                   </div>
 
@@ -399,7 +401,7 @@ export const ChallengesModal: React.FC<ChallengesModalProps> = ({
               onClick={handleCreateChallenge}
               className="w-full py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium"
             >
-              🎯 創建挑戰
+              🎯 {translations.createChallenge}
             </button>
 
             {/* 快速模板 */}

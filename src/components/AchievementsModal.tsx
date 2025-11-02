@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Achievement, UserAchievement, UserProfile } from '../types';
+import { Achievement, UserAchievement, UserProfile, TranslationStrings } from '../types';
 
 interface AchievementsModalProps {
   isOpen: boolean;
@@ -7,6 +7,7 @@ interface AchievementsModalProps {
   user: UserProfile | null;
   poops: any[];
   friends: any[];
+  translations: TranslationStrings;
 }
 
 export const AchievementsModal: React.FC<AchievementsModalProps> = ({
@@ -15,6 +16,7 @@ export const AchievementsModal: React.FC<AchievementsModalProps> = ({
   user,
   poops,
   friends,
+  translations,
 }) => {
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [userAchievements, setUserAchievements] = useState<UserAchievement[]>([]);
@@ -299,7 +301,7 @@ export const AchievementsModal: React.FC<AchievementsModalProps> = ({
       <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-gray-800">
-            🏅 成就系統
+            🏅 {translations.achievementSystem}
           </h2>
           <button
             onClick={onClose}
@@ -313,15 +315,15 @@ export const AchievementsModal: React.FC<AchievementsModalProps> = ({
         <div className="grid grid-cols-3 gap-4 mb-6">
           <div className="text-center p-3 bg-purple-50 rounded-lg">
             <div className="text-2xl font-bold text-purple-600">{userAchievements.length}</div>
-            <div className="text-sm text-purple-600">已解鎖</div>
+            <div className="text-sm text-purple-600">{translations.unlocked}</div>
           </div>
           <div className="text-center p-3 bg-blue-50 rounded-lg">
             <div className="text-2xl font-bold text-blue-600">{achievements.length}</div>
-            <div className="text-sm text-blue-600">總成就</div>
+            <div className="text-sm text-blue-600">{translations.totalAchievements}</div>
           </div>
           <div className="text-center p-3 bg-yellow-50 rounded-lg">
             <div className="text-2xl font-bold text-yellow-600">{totalPoints}</div>
-            <div className="text-sm text-yellow-600">總積分</div>
+            <div className="text-sm text-yellow-600">{translations.totalPoints}</div>
           </div>
         </div>
 
@@ -348,7 +350,7 @@ export const AchievementsModal: React.FC<AchievementsModalProps> = ({
           {unlockedAchievements.length > 0 && (
             <div>
               <h3 className="text-lg font-semibold text-gray-800 mb-3">
-                ✅ 已解鎖 ({unlockedAchievements.length})
+                ✅ {translations.unlocked} ({unlockedAchievements.length})
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {unlockedAchievements.map((achievement) => {
