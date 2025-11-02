@@ -42,7 +42,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, transl
       if (Capacitor.isNativePlatform()) {
         // 原生平台使用 Capacitor Google Auth
         console.log('Using native Google Auth');
+        console.log('Platform:', Capacitor.getPlatform());
+        
         const user = await GoogleAuthService.signIn();
+        console.log('Google Auth result:', user);
         
         if (user) {
           // 轉換為與 Web 版本兼容的格式
@@ -53,8 +56,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, transl
             scope: 'profile email',
           };
           
+          console.log('Login successful, calling onLoginSuccess');
           // 同時傳遞用戶信息
           onLoginSuccess({ ...tokenResponse, user });
+        } else {
+          console.log('User cancelled login or no user returned');
+          setError('登入已取消');
         }
       } else {
         // Web 平台使用原有的 Google OAuth
@@ -62,8 +69,29 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, transl
         webLogin();
       }
     } catch (error) {
-      console.error('Login error:', error);
-      setError('登入失敗，請檢查網路連接並重試');
+      console.error('Login error details:', error);
+      
+      // 更詳細的錯誤處理
+      let errorMessage = '登入失敗';
+      
+      if (error && typeof error === 'object') {
+        const err = error as any;
+        if (err.message) {
+          if (err.message.includes('cancelled') || err.message.includes('canceled')) {
+            errorMessage = '登入已取消';
+          } else if (err.message.includes('network') || err.message.includes('Network')) {
+            errorMessage = '網路連接錯誤，請檢查網路設定';
+          } else if (err.message.includes('invalid_client')) {
+            errorMessage = 'Google 配置錯誤，請聯繫開發者';
+          } else if (err.message.includes('unauthorized_client')) {
+            errorMessage = 'Google 應用未授權，請聯繫開發者';
+          } else {
+            errorMessage = `登入失敗: ${err.message}`;
+          }
+        }
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
