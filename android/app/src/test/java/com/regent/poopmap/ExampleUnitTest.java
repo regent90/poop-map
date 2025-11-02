@@ -1,4 +1,4 @@
-package com.getcapacitor.myapp;
+package com.regent.poopmap;
 
 import static org.junit.Assert.*;
 
