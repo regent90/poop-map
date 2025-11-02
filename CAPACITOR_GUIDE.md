@@ -167,12 +167,40 @@ npm run cap:sync
 3. 使用 Organizer 上傳到 App Store Connect
 4. 通過 App Store Connect 提交審核
 
+## 🧪 測試
+
+### Android 測試
+```bash
+# 運行單元測試
+cd android && ./gradlew test
+
+# 運行儀器測試（需要連接設備或模擬器）
+cd android && ./gradlew connectedAndroidTest
+```
+
+### iOS 測試
+```bash
+# 在 Xcode 中運行測試
+# Product > Test (Cmd+U)
+```
+
+### Web 測試
+```bash
+# 如果有配置 Jest 或其他測試框架
+npm test
+```
+
 ## 🐛 常見問題
 
 ### 1. Android 構建失敗
 - 確保 JAVA_HOME 環境變量正確設置
 - 檢查 Android SDK 路徑
 - 清理並重新構建: `cd android && ./gradlew clean`
+
+### 2. Android 測試失敗
+- 確保測試文件的包名與應用包名一致
+- 檢查 `android/app/src/androidTest/java/com/regent/poopmap/` 目錄結構
+- 運行測試前確保設備/模擬器已連接
 
 ### 2. iOS 構建失敗
 - 運行 `cd ios/App && pod install`
