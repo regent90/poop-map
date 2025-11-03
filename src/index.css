@@ -28,6 +28,11 @@ html, body {
   padding-left: var(--safe-area-inset-left);
 }
 
+/* Capacitor 原生應用額外底部間距 */
+.capacitor-native {
+  padding-bottom: calc(var(--safe-area-inset-bottom) + 1rem);
+}
+
 /* 移動端視窗修復 */
 @supports (-webkit-touch-callout: none) {
   #root {

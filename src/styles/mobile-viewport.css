@@ -35,9 +35,14 @@
 
 /* 底部按鈕安全區域 */
 .mobile-bottom-button {
-  bottom: calc(1rem + var(--safe-area-inset-bottom));
+  bottom: calc(2rem + var(--safe-area-inset-bottom));
   left: 50%;
   transform: translateX(-50%);
+}
+
+/* Capacitor 原生應用額外間距 */
+.capacitor-native .mobile-bottom-button {
+  bottom: calc(3rem + var(--safe-area-inset-bottom));
 }
 
 /* 右下角按鈕安全區域 */
@@ -66,7 +71,11 @@
 /* 防止內容被瀏覽器 UI 遮擋 */
 @media screen and (max-height: 700px) {
   .mobile-bottom-button {
-    bottom: calc(0.5rem + var(--safe-area-inset-bottom));
+    bottom: calc(1.5rem + var(--safe-area-inset-bottom));
+  }
+  
+  .capacitor-native .mobile-bottom-button {
+    bottom: calc(2.5rem + var(--safe-area-inset-bottom));
   }
   
   .mobile-bottom-right-button {
@@ -81,7 +90,11 @@
 /* 橫屏模式調整 */
 @media screen and (orientation: landscape) and (max-height: 500px) {
   .mobile-bottom-button {
-    bottom: calc(0.25rem + var(--safe-area-inset-bottom));
+    bottom: calc(1rem + var(--safe-area-inset-bottom));
+  }
+  
+  .capacitor-native .mobile-bottom-button {
+    bottom: calc(1.5rem + var(--safe-area-inset-bottom));
   }
   
   .mobile-stats-container {

@@ -1454,7 +1454,7 @@ const App: React.FC = () => {
         </div>
       )}
 
-      <div className="absolute mobile-bottom-button z-10 flex flex-col items-center space-y-2">
+      <div className={`absolute mobile-bottom-button z-10 flex flex-col items-center space-y-2 ${CapacitorService.isNative() ? 'capacitor-native' : ''}`}>
         <button
           onClick={addPoop}
           disabled={isDropping}
