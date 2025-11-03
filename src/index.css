@@ -2,6 +2,67 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Capacitor 安全區域支持 */
+:root {
+  --safe-area-inset-top: env(safe-area-inset-top);
+  --safe-area-inset-right: env(safe-area-inset-right);
+  --safe-area-inset-bottom: env(safe-area-inset-bottom);
+  --safe-area-inset-left: env(safe-area-inset-left);
+}
+
+/* 全屏應用容器 */
+html, body {
+  height: 100vh;
+  height: 100dvh; /* 動態視窗高度 */
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+#root {
+  height: 100vh;
+  height: 100dvh;
+  padding-top: var(--safe-area-inset-top);
+  padding-right: var(--safe-area-inset-right);
+  padding-bottom: var(--safe-area-inset-bottom);
+  padding-left: var(--safe-area-inset-left);
+}
+
+/* 移動端視窗修復 */
+@supports (-webkit-touch-callout: none) {
+  #root {
+    height: -webkit-fill-available;
+  }
+}
+
+/* Tailwind 安全區域工具類 */
+@layer utilities {
+  .pt-safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  .pr-safe-right {
+    padding-right: env(safe-area-inset-right);
+  }
+  .pb-safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .pl-safe-left {
+    padding-left: env(safe-area-inset-left);
+  }
+  .mt-safe-top {
+    margin-top: env(safe-area-inset-top);
+  }
+  .mr-safe-right {
+    margin-right: env(safe-area-inset-right);
+  }
+  .mb-safe-bottom {
+    margin-bottom: env(safe-area-inset-bottom);
+  }
+  .ml-safe-left {
+    margin-left: env(safe-area-inset-left);
+  }
+}
+
 /* 便便攻擊動畫效果 */
 @keyframes poopExplosion {
   0% {

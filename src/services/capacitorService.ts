@@ -127,6 +127,16 @@ export class CapacitorService {
       await StatusBar.setStyle({
         style: dark ? Style.Dark : Style.Light
       });
+
+      // 設置狀態欄背景色
+      await StatusBar.setBackgroundColor({
+        color: '#10B981'
+      });
+
+      // 確保狀態欄不覆蓋內容
+      await StatusBar.setOverlaysWebView({
+        overlay: false
+      });
     } catch (error) {
       console.error('Error setting status bar style:', error);
     }
@@ -157,7 +167,7 @@ export class CapacitorService {
     try {
       if (!this.isNative()) return;
 
-      // 設置狀態欄
+      // 設置狀態欄樣式和背景
       await this.setStatusBarStyle(false);
 
       // 隱藏啟動畫面

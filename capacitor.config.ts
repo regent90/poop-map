@@ -22,6 +22,11 @@ const config: CapacitorConfig = {
       layoutName: 'launch_screen',
       useDialog: true,
     },
+    StatusBar: {
+      style: 'light',
+      backgroundColor: '#10B981',
+      overlaysWebView: false,
+    },
     Geolocation: {
       permissions: ['location']
     },

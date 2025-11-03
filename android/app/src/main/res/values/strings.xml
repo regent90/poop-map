@@ -5,4 +5,5 @@
     <string name="package_name">com.regent.poopmap</string>
     <string name="custom_url_scheme">com.regent.poopmap</string>
     <string name="server_client_id">960272040462-l9ok0pdikok8c4fied49j6kbee4ruurg.apps.googleusercontent.com</string>
+    <string name="android_client_id">960272040462-fqq49udtvv5ndege5tgdqml3dg8f04pt.apps.googleusercontent.com</string>
 </resources>
