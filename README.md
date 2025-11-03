@@ -2,6 +2,18 @@
 
 一個類似 PoopMap.net 的多語言便便追蹤應用程式，支援 Google 登入和 Google Maps 整合。
 
+## 📱 立即下載
+
+### Android APK
+- **最新版本**: v1.0.0 (2025-11-03)
+- **下載鏈接**: [poop-map-v1.0.0-debug.apk](releases/poop-map-v1.0.0-debug.apk) (9.93 MB)
+- **最低要求**: Android 7.0+
+- **詳細說明**: [發布說明](releases/README.md)
+
+### 其他平台
+- 🍎 **iOS**: 開發中
+- 🌐 **Web 版**: [https://poop-map.vercel.app](https://poop-map.vercel.app)
+
 ## 功能特色
 
 - 🌍 **多語言支援**: 支援英文、繁體中文、簡體中文、日文、韓文、西班牙文、法文、德文
