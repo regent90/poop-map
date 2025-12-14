@@ -73,14 +73,13 @@ export const ChallengesModal: React.FC<ChallengesModalProps> = ({
     },
   ];
 
-  const getTypeIcon = (type: string) => {
+  const getChallengeImage = (type: string) => {
     switch (type) {
-      case 'poop_count': return '💩';
-      case 'rating_streak': return '⭐';
-      case 'friend_invite': return '👥';
-      case 'attack_count': return '💥';
-      case 'location_variety': return '🗺️';
-      default: return '🎯';
+      case 'poop_count': return '/images/ui/poop_count.png';
+      case 'rating_streak': return '/images/ui/rating_streak.png';
+      case 'friend_invite': return '/images/ui/friend_invite.png';
+      case 'attack_count': return '/images/ui/attack_count.png';
+      default: return '/images/ui/poop_count.png';
     }
   };
 
@@ -200,7 +199,13 @@ export const ChallengesModal: React.FC<ChallengesModalProps> = ({
                 <div key={challenge._id} className="border-2 border-purple-200 rounded-lg p-4 bg-purple-50">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center">
-                      <span className="text-2xl mr-3">{getTypeIcon(challenge.type)}</span>
+                      <div className="mr-3 w-16 h-16 flex-shrink-0">
+                        <img
+                          src={getChallengeImage(challenge.type)}
+                          alt={challenge.type}
+                          className="w-full h-full object-contain drop-shadow-sm"
+                        />
+                      </div>
                       <div>
                         <h3 className="font-bold text-gray-800">{challenge.title}</h3>
                         <p className="text-sm text-gray-600">{challenge.description}</p>
@@ -248,7 +253,6 @@ export const ChallengesModal: React.FC<ChallengesModalProps> = ({
           <div className="space-y-4">
             {completedChallenges.length === 0 ? (
               <div className="text-center py-8">
-                <div className="text-6xl mb-4">🏆</div>
                 <p className="text-gray-500">還沒有完成的挑戰</p>
                 <p className="text-sm text-gray-400">完成挑戰來獲得獎勵!</p>
               </div>
@@ -257,7 +261,13 @@ export const ChallengesModal: React.FC<ChallengesModalProps> = ({
                 <div key={challenge._id} className="border-2 border-gray-200 rounded-lg p-4 bg-gray-50">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center">
-                      <span className="text-2xl mr-3">{getTypeIcon(challenge.type)}</span>
+                      <div className="mr-3 w-16 h-16 flex-shrink-0 grayscale opacity-80">
+                        <img
+                          src={getChallengeImage(challenge.type)}
+                          alt={challenge.type}
+                          className="w-full h-full object-contain drop-shadow-sm"
+                        />
+                      </div>
                       <div>
                         <h3 className="font-bold text-gray-600">{challenge.title}</h3>
                         <p className="text-sm text-gray-500">{challenge.description}</p>
@@ -384,7 +394,7 @@ export const ChallengesModal: React.FC<ChallengesModalProps> = ({
               onClick={handleCreateChallenge}
               className="w-full py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium"
             >
-              🎯 {translations.createChallenge}
+              {translations.createChallenge}
             </button>
 
             {/* 快速模板 */}
@@ -405,7 +415,13 @@ export const ChallengesModal: React.FC<ChallengesModalProps> = ({
                     className="p-3 border border-gray-200 rounded-lg hover:border-purple-300 text-left"
                   >
                     <div className="flex items-center mb-1">
-                      <span className="text-lg mr-2">{getTypeIcon(template.type)}</span>
+                      <div className="mr-2 w-8 h-8 flex-shrink-0">
+                        <img
+                          src={getChallengeImage(template.type)}
+                          alt={template.type}
+                          className="w-full h-full object-contain drop-shadow-sm"
+                        />
+                      </div>
                       <span className="font-medium text-sm">{template.title}</span>
                     </div>
                     <p className="text-xs text-gray-600">{template.description}</p>

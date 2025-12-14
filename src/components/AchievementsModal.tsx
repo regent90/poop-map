@@ -276,6 +276,10 @@ export const AchievementsModal: React.FC<AchievementsModalProps> = ({
     }
   };
 
+  const getRarityImage = (rarity: string) => {
+    return `/images/ui/${rarity}.png`;
+  };
+
   const getCategoryName = (category: string) => {
     switch (category) {
       case 'quantity': return '數量';
@@ -357,7 +361,7 @@ export const AchievementsModal: React.FC<AchievementsModalProps> = ({
           {unlockedAchievements.length > 0 && (
             <div>
               <h3 className="text-lg font-semibold text-gray-800 mb-3">
-                ✅ {translations.unlocked} ({unlockedAchievements.length})
+                {translations.unlocked} ({unlockedAchievements.length})
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {unlockedAchievements.map((achievement) => {
@@ -368,7 +372,13 @@ export const AchievementsModal: React.FC<AchievementsModalProps> = ({
                       className={`p-4 rounded-lg border-2 ${getRarityColor(achievement.rarity)}`}
                     >
                       <div className="flex items-start">
-                        <div className="text-3xl mr-3">{achievement.icon}</div>
+                        <div className="mr-3 w-16 h-16 flex-shrink-0">
+                          <img
+                            src={getRarityImage(achievement.rarity)}
+                            alt={achievement.rarity}
+                            className="w-full h-full object-contain drop-shadow-md"
+                          />
+                        </div>
                         <div className="flex-1">
                           <div className="flex items-center justify-between mb-1">
                             <h4 className="font-semibold text-gray-800">{achievement.name}</h4>
@@ -398,7 +408,7 @@ export const AchievementsModal: React.FC<AchievementsModalProps> = ({
           {lockedAchievements.length > 0 && (
             <div>
               <h3 className="text-lg font-semibold text-gray-800 mb-3">
-                🔒 未解鎖 ({lockedAchievements.length})
+                未解鎖 ({lockedAchievements.length})
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {lockedAchievements.map((achievement) => (
@@ -407,7 +417,13 @@ export const AchievementsModal: React.FC<AchievementsModalProps> = ({
                     className="p-4 rounded-lg border-2 border-gray-200 bg-gray-50 opacity-75"
                   >
                     <div className="flex items-start">
-                      <div className="text-3xl mr-3 grayscale">{achievement.icon}</div>
+                      <div className="mr-3 w-16 h-16 flex-shrink-0 grayscale opacity-40">
+                        <img
+                          src={getRarityImage(achievement.rarity)}
+                          alt={achievement.rarity}
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
                       <div className="flex-1">
                         <div className="flex items-center justify-between mb-1">
                           <h4 className="font-semibold text-gray-600">{achievement.name}</h4>
