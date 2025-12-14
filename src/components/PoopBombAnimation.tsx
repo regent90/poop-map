@@ -18,18 +18,17 @@ interface PoopParticle {
   rotationSpeed: number;
   scale: number;
   scaleSpeed: number;
-  emoji: string;
-  cuteText?: string; // 醜萌文字表情
+  imageUrl: string; // 改用圖片路徑
   opacity: number;
   color: string;
   trail: { x: number; y: number }[];
   life: number;
   maxLife: number;
-  bounceCount: number; // 彈跳次數
-  wigglePhase: number; // 搖擺相位
-  cuteness: number; // 萌度係數
-  isGiggling: boolean; // 是否在咯咯笑
-  heartBeat: number; // 心跳效果
+  bounceCount: number;
+  wigglePhase: number;
+  cuteness: number;
+  isGiggling: boolean;
+  heartBeat: number;
 }
 
 interface Firework {
@@ -57,35 +56,28 @@ export const PoopBombAnimation: React.FC<PoopBombAnimationProps> = ({ attack, on
 
   const effect = POOP_BOMB_EFFECTS[attack.itemUsed.type];
   const rarityColor = RARITY_COLORS[attack.itemUsed.rarity];
+  const itemImageUrl = POOP_ITEM_CONFIGS[attack.itemUsed.type]?.imageUrl;
 
-  // 根據道具類型選擇 emoji 和顏色 - 醜萌版本
+  // 顏色配置 - 這是唯一保留的部分，用於光效和軌跡
   const getEffectConfig = (type: string) => {
     switch (type) {
       case 'golden_poop':
         return {
-          emojis: ['💩', '✨', '🤩', '😍', '🥰', '💖', '🌟', '💫', '🎉', '🥳'],
-          cuteEmojis: ['(◕‿◕)', '(´∀｀)', '(＾◡＾)', '(◡ ‿ ◡)', '(✿◠‿◠)', '(◕ᴗ◕✿)', '(◠‿◠)', '(◕‿‿◕)'],
           colors: ['#FFD700', '#FFA500', '#FFFF00', '#FF69B4'],
           bgGradient: 'from-yellow-400 via-pink-400 to-orange-500',
         };
       case 'rainbow_poop':
         return {
-          emojis: ['💩', '🌈', '🦄', '🎨', '🎊', '🎉', '😊', '😄', '🤗', '🥰'],
-          cuteEmojis: ['ヽ(◕‿◕)ﾉ', '(ﾉ◕ヮ◕)ﾉ*:･ﾟ✧', '(◕‿◕)♡', '(◡‿◡)', '(◕ᴗ◕✿)', '(◠‿◠)♡'],
           colors: ['#FF69B4', '#FF1493', '#00CED1', '#32CD32', '#FFD700', '#FF6347'],
           bgGradient: 'from-pink-400 via-purple-400 to-blue-400',
         };
       case 'stinky_poop':
         return {
-          emojis: ['💩', '🤢', '😵', '😖', '😣', '💀', '👻', '🌪️', '💥', '😱'],
-          cuteEmojis: ['(>_<)', '(╥﹏╥)', '(´；ω；`)', '(◞‸◟)', '(｡•́︿•̀｡)', '(╯︵╰)', '(◕︵◕)'],
           colors: ['#8B4513', '#654321', '#2F4F2F', '#800080', '#228B22'],
           bgGradient: 'from-green-600 via-brown-600 to-purple-900',
         };
       default:
         return {
-          emojis: ['💩', '😊', '😄', '🤗', '😋', '💨', '💥', '🌟', '✨'],
-          cuteEmojis: ['(◕‿◕)', '(´∀｀)', '(＾◡＾)', '(◡ ‿ ◡)', '(✿◠‿◠)', '(◕ᴗ◕✿)'],
           colors: ['#8B4513', '#A0522D', '#D2691E', '#FF69B4'],
           bgGradient: 'from-brown-400 via-orange-400 to-pink-400',
         };
@@ -94,28 +86,29 @@ export const PoopBombAnimation: React.FC<PoopBombAnimationProps> = ({ attack, on
 
   const config = getEffectConfig(attack.itemUsed.type);
 
-  // 創建超級醜萌的粒子
+  // 創建 3D 圖片粒子
   const createParticles = useCallback((): PoopParticle[] => {
     const newParticles: PoopParticle[] = [];
 
+    // 如果找不到圖片，就不生成粒子 (避免報錯)
+    if (!itemImageUrl) return [];
+
     for (let i = 0; i < effect.particles; i++) {
       const angle = (Math.PI * 2 * i) / effect.particles + Math.random() * 0.5;
-      const speed = Math.random() * 6 + 3; // 稍微慢一點，更萌
-      const life = Math.random() * 4000 + 3000; // 活得更久一點
-      const isCute = Math.random() > 0.3; // 70% 機率是萌的
+      const speed = Math.random() * 6 + 3;
+      const life = Math.random() * 4000 + 3000;
 
       newParticles.push({
         id: i,
-        x: window.innerWidth / 2 + (Math.random() - 0.5) * 100, // 稍微分散一點
+        x: window.innerWidth / 2 + (Math.random() - 0.5) * 100,
         y: window.innerHeight / 2 + (Math.random() - 0.5) * 100,
         vx: Math.cos(angle) * speed + (Math.random() - 0.5) * 3,
         vy: Math.sin(angle) * speed + (Math.random() - 0.5) * 3,
         rotation: Math.random() * 360,
-        rotationSpeed: (Math.random() - 0.5) * 15, // 稍微慢一點的旋轉
-        scale: Math.random() * 1.2 + 0.8, // 更一致的大小
+        rotationSpeed: (Math.random() - 0.5) * 15,
+        scale: Math.random() * 0.5 + 0.2, // 粒子圖示小一點
         scaleSpeed: (Math.random() - 0.5) * 0.01,
-        emoji: config.emojis[Math.floor(Math.random() * config.emojis.length)],
-        cuteText: isCute ? config.cuteEmojis[Math.floor(Math.random() * config.cuteEmojis.length)] : undefined,
+        imageUrl: itemImageUrl, // 使用道具圖片
         opacity: 1,
         color: config.colors[Math.floor(Math.random() * config.colors.length)],
         trail: [],
@@ -123,14 +116,14 @@ export const PoopBombAnimation: React.FC<PoopBombAnimationProps> = ({ attack, on
         maxLife: life,
         bounceCount: 0,
         wigglePhase: Math.random() * Math.PI * 2,
-        cuteness: Math.random() * 0.5 + 0.5, // 萌度係數 0.5-1.0
-        isGiggling: Math.random() > 0.7, // 30% 機率在咯咯笑
+        cuteness: Math.random() * 0.5 + 0.5,
+        isGiggling: Math.random() > 0.7,
         heartBeat: 0,
       });
     }
 
     return newParticles;
-  }, [effect.particles, config]);
+  }, [effect.particles, config, itemImageUrl]);
 
   // 創建煙火效果
   const createFirework = useCallback((x: number, y: number): Firework => {
@@ -308,11 +301,11 @@ export const PoopBombAnimation: React.FC<PoopBombAnimationProps> = ({ attack, on
       {/* 醜萌背景粒子效果 */}
       {isAnimating && (
         <div className="absolute inset-0">
-          {/* 飄落的便便和愛心 */}
-          {Array.from({ length: 30 }).map((_, i) => (
+          {/* 飄落的便便和愛心 - 簡化為飄落的裝飾 */}
+          {Array.from({ length: 20 }).map((_, i) => (
             <div
               key={`poop-${i}`}
-              className="absolute opacity-40"
+              className="absolute opacity-40 mix-blend-overlay"
               style={{
                 left: `${Math.random() * 100}%`,
                 top: `${Math.random() * 100}%`,
@@ -321,25 +314,8 @@ export const PoopBombAnimation: React.FC<PoopBombAnimationProps> = ({ attack, on
                 animationDelay: `${Math.random() * 2}s`,
               }}
             >
-              {['💩', '💖', '✨', '🌟', '💫'][Math.floor(Math.random() * 5)]}
-            </div>
-          ))}
-
-          {/* 醜萌文字表情雨 */}
-          {Array.from({ length: 20 }).map((_, i) => (
-            <div
-              key={`cute-${i}`}
-              className="absolute opacity-50 text-pink-500 font-bold"
-              style={{
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-                fontSize: '1rem',
-                fontFamily: 'monospace',
-                animation: `cuteWiggle ${Math.random() * 2 + 1}s ease-in-out infinite`,
-                animationDelay: `${Math.random() * 3}s`,
-              }}
-            >
-              {config.cuteEmojis[Math.floor(Math.random() * config.cuteEmojis.length)]}
+              {/* 只保留星星和愛心作為裝飾 */}
+              {['💖', '✨', '🌟', '💫', '⚪'][Math.floor(Math.random() * 5)]}
             </div>
           ))}
 
@@ -483,10 +459,10 @@ export const PoopBombAnimation: React.FC<PoopBombAnimationProps> = ({ attack, on
         </div>
       )}
 
-      {/* 粒子動畫 */}
+      {/* 粒子動畫 - 改為渲染圖片 */}
       {isAnimating && particles.map(particle => (
         <div key={particle.id}>
-          {/* 粒子軌跡 */}
+          {/* 粒子軌跡 - 保持用 CSS 繪製的光點，這樣比較好看 */}
           {particle.trail.map((point, index) => (
             <div
               key={index}
@@ -503,81 +479,34 @@ export const PoopBombAnimation: React.FC<PoopBombAnimationProps> = ({ attack, on
             />
           ))}
 
-          {/* 醜萌主粒子 */}
+          {/* 3D 圖片粒子 */}
           <div
             className={`absolute pointer-events-none select-none ${attack.itemUsed.type === 'rainbow_poop' ? 'rainbow-pulse' : ''
               } ${attack.itemUsed.type === 'golden_poop' ? 'golden-shimmer' : ''
               }`}
             style={{
-              left: particle.x - 20,
-              top: particle.y - 20,
+              left: particle.x - 40, // Adjust for image center (assuming 80px width)
+              top: particle.y - 40,  // Adjust for image center (assuming 80px height)
               transform: `rotate(${particle.rotation}deg) scale(${particle.scale})`,
               opacity: particle.opacity,
-              fontSize: particle.isGiggling ? '3.5rem' : '3rem',
-              textShadow: `0 0 20px ${particle.color}, 0 0 40px ${particle.color}, 0 0 60px rgba(255, 192, 203, 0.5)`,
-              filter: `drop-shadow(0 0 12px ${particle.color}) brightness(1.3) saturate(1.2)`,
-              transition: 'font-size 0.3s ease-in-out',
+              width: '80px', // 固定圖片大小
+              height: '80px',
+              transition: 'transform 0.1s ease-out',
             }}
           >
-            <div className="relative">
-              {particle.emoji}
-              {/* 醜萌文字表情 */}
-              {particle.cuteText && (
-                <div
-                  className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 text-xs font-bold"
-                  style={{
-                    color: particle.color,
-                    textShadow: `0 0 10px ${particle.color}`,
-                    fontSize: '0.8rem',
-                    fontFamily: 'monospace',
-                    animation: particle.isGiggling ? 'bounce 0.5s infinite' : 'none',
-                  }}
-                >
-                  {particle.cuteText}
-                </div>
-              )}
-              {/* 愛心效果 */}
-              {particle.cuteness > 0.8 && (
-                <div
-                  className="absolute -top-4 -right-2 text-pink-400"
-                  style={{
-                    fontSize: '1rem',
-                    animation: 'pulse 1s infinite',
-                    opacity: particle.opacity * 0.7,
-                  }}
-                >
-                  💖
-                </div>
-              )}
-              {/* 星星效果 */}
-              {particle.isGiggling && (
-                <>
-                  <div
-                    className="absolute -top-6 -left-4 text-yellow-300"
-                    style={{
-                      fontSize: '0.8rem',
-                      animation: 'spin 2s linear infinite',
-                      opacity: particle.opacity * 0.6,
-                    }}
-                  >
-                    ✨
-                  </div>
-                  <div
-                    className="absolute -top-6 -right-4 text-yellow-300"
-                    style={{
-                      fontSize: '0.8rem',
-                      animation: 'spin 2s linear infinite reverse',
-                      opacity: particle.opacity * 0.6,
-                    }}
-                  >
-                    ✨
-                  </div>
-                </>
-              )}
-            </div>
+            {/* 使用 img 標籤渲染 3D 圖片 */}
+            <img
+              src={particle.imageUrl}
+              alt="particle"
+              className="w-full h-full object-contain drop-shadow-lg"
+              style={{
+                filter: `drop-shadow(0 0 5px ${particle.color})`, // 為圖片加上對應顏色的光暈
+              }}
+            />
           </div>
         </div>
       ))}
+
 
       {/* 煙火效果 */}
       {fireworks.map(firework => (
