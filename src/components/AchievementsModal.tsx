@@ -194,9 +194,15 @@ export const AchievementsModal: React.FC<AchievementsModalProps> = ({
           break;
 
         case 'rating_average':
-          const totalRating = userPoops.reduce((sum, p) => sum + (p.rating || 0), 0);
-          const averageRating = userPoops.length > 0 ? totalRating / userPoops.length : 0;
-          shouldUnlock = averageRating >= achievement.requirement.value;
+          // 特殊處理:完美體驗成就檢查是否有任何一次 5 星評分
+          if (achievement.id === 'perfect_rating') {
+            shouldUnlock = userPoops.some(p => p.rating === 5);
+          } else {
+            // 其他成就檢查平均評分
+            const totalRating = userPoops.reduce((sum, p) => sum + (p.rating || 0), 0);
+            const averageRating = userPoops.length > 0 ? totalRating / userPoops.length : 0;
+            shouldUnlock = averageRating >= achievement.requirement.value;
+          }
           break;
 
         case 'friend_count':
