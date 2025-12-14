@@ -11,7 +11,7 @@ export const POOP_ITEM_CONFIGS = {
     imageUrl: '/images/items/poop_bomb.jpg',
     rarity: 'common' as const,
     dropRate: 0.8, // 80% 機率獲得
-    videoUrl: undefined, // 預留欄位
+    videoUrl: '/videos/items/poop_bomb.webm',
   },
   golden_poop: {
     type: 'golden_poop' as const,
@@ -21,7 +21,7 @@ export const POOP_ITEM_CONFIGS = {
     imageUrl: '/images/items/golden_poop.jpg',
     rarity: 'rare' as const,
     dropRate: 0.15, // 15% 機率獲得
-    videoUrl: undefined,
+    videoUrl: '/videos/items/golden_poop.webm',
   },
   rainbow_poop: {
     type: 'rainbow_poop' as const,
@@ -31,7 +31,7 @@ export const POOP_ITEM_CONFIGS = {
     imageUrl: '/images/items/rainbow_poop.jpg',
     rarity: 'epic' as const,
     dropRate: 0.04, // 4% 機率獲得
-    videoUrl: undefined,
+    videoUrl: '/videos/items/rainbow_poop.webm',
   },
   stinky_poop: {
     type: 'stinky_poop' as const,
@@ -41,7 +41,7 @@ export const POOP_ITEM_CONFIGS = {
     imageUrl: '/images/items/stinky_poop.jpg',
     rarity: 'legendary' as const,
     dropRate: 0.01, // 1% 機率獲得
-    videoUrl: undefined,
+    videoUrl: '/videos/items/stinky_poop.webm',
   },
 };
 

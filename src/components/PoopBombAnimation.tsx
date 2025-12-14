@@ -386,8 +386,25 @@ export const PoopBombAnimation: React.FC<PoopBombAnimationProps> = ({ attack, on
                 animation: currentPhase === 'buildup' ? 'bounce 0.3s infinite' : 'spin 3s linear infinite',
               }}
             >
-              {/* 替換原本的 Emoji 為圖片 */}
-              {POOP_ITEM_CONFIGS[attack.itemUsed.type]?.imageUrl ? (
+              {/* 優先渲染影片，如果沒有則渲染圖片 */}
+              {POOP_ITEM_CONFIGS[attack.itemUsed.type]?.videoUrl ? (
+                <div className="relative w-48 h-48">
+                  <video
+                    src={POOP_ITEM_CONFIGS[attack.itemUsed.type].videoUrl}
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    className="w-full h-full object-cover rounded-full shadow-2xl"
+                    style={{
+                      // 嘗試混合模式以隱藏背景 (如果是淺色底)
+                      // mixBlendMode: 'multiply',
+                      // 由於不確定背景色，先主要依賴圓形裁剪，如果背景是純白，multiply 效果最好
+                      filter: `drop-shadow(0 0 15px ${rarityColor})`,
+                    }}
+                  />
+                </div>
+              ) : POOP_ITEM_CONFIGS[attack.itemUsed.type]?.imageUrl ? (
                 <img
                   src={POOP_ITEM_CONFIGS[attack.itemUsed.type].imageUrl}
                   alt={attack.itemUsed.name}
