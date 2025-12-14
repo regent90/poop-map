@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '../convex/_generated/api';
 import { Challenge, UserProfile, Friend, TranslationStrings } from '../types';
 
 interface ChallengesModalProps {
@@ -16,16 +18,24 @@ export const ChallengesModal: React.FC<ChallengesModalProps> = ({
   friends,
   translations,
 }) => {
-  const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [selectedTab, setSelectedTab] = useState<'active' | 'completed' | 'create'>('active');
   const [newChallenge, setNewChallenge] = useState({
     title: '',
     description: '',
-    type: 'poop_count' as Challenge['type'],
+    type: 'poop_count' as 'poop_count' | 'rating_streak' | 'friend_invite' | 'attack_count' | 'location_variety',
     target: 10,
     duration: 7, // 天數
     participants: [] as string[],
   });
+
+  // 從 Convex 資料庫獲取挑戰
+  const challengesData = useQuery(
+    api.social.getChallenges,
+    user?.email ? { userId: user.email } : 'skip'
+  );
+
+  // 創建挑戰的 mutation
+  const createChallengeMutation = useMutation(api.social.createChallenge);
 
   // 預定義挑戰模板
   const challengeTemplates = [
@@ -63,36 +73,7 @@ export const ChallengesModal: React.FC<ChallengesModalProps> = ({
     },
   ];
 
-  // 生成模擬挑戰數據
-  const generateMockChallenges = (): Challenge[] => {
-    return challengeTemplates.map((template, index) => ({
-      id: `challenge_${index}`,
-      title: template.title,
-      description: template.description,
-      type: template.type,
-      target: template.target,
-      duration: template.duration * 24 * 60 * 60 * 1000, // 轉換為毫秒
-      createdBy: index % 2 === 0 ? user?.email || '' : friends[0]?.email || '',
-      createdByName: index % 2 === 0 ? user?.name || 'You' : friends[0]?.name || 'Friend',
-      participants: [
-        user?.email || '',
-        ...(friends.slice(0, Math.floor(Math.random() * 3) + 1).map(f => f.email))
-      ],
-      startTime: Date.now() - Math.floor(Math.random() * 3 * 24 * 60 * 60 * 1000),
-      endTime: Date.now() + Math.floor(Math.random() * 7 * 24 * 60 * 60 * 1000),
-      status: Math.random() > 0.3 ? 'active' : 'completed',
-      reward: template.reward,
-      progress: Math.floor(Math.random() * template.target),
-    }));
-  };
-
-  useEffect(() => {
-    if (isOpen) {
-      setChallenges(generateMockChallenges());
-    }
-  }, [isOpen]);
-
-  const getTypeIcon = (type: Challenge['type']) => {
+  const getTypeIcon = (type: string) => {
     switch (type) {
       case 'poop_count': return '💩';
       case 'rating_streak': return '⭐';
@@ -103,7 +84,7 @@ export const ChallengesModal: React.FC<ChallengesModalProps> = ({
     }
   };
 
-  const getTypeName = (type: Challenge['type']) => {
+  const getTypeName = (type: string) => {
     switch (type) {
       case 'poop_count': return '便便數量';
       case 'rating_streak': return '評分連擊';
@@ -117,56 +98,59 @@ export const ChallengesModal: React.FC<ChallengesModalProps> = ({
   const getTimeRemaining = (endTime: number) => {
     const remaining = endTime - Date.now();
     if (remaining <= 0) return '已結束';
-    
+
     const days = Math.floor(remaining / (24 * 60 * 60 * 1000));
     const hours = Math.floor((remaining % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
-    
+
     if (days > 0) return `${days} 天 ${hours} 小時`;
     return `${hours} 小時`;
   };
 
-  const getProgressPercentage = (challenge: Challenge) => {
-    return Math.min((challenge.progress / challenge.target) * 100, 100);
+  const getProgressPercentage = (progress: number, target: number) => {
+    return Math.min((progress / target) * 100, 100);
   };
 
-  const handleCreateChallenge = () => {
+  const handleCreateChallenge = async () => {
     if (!newChallenge.title || !newChallenge.description) {
       alert('請填寫挑戰標題和描述');
       return;
     }
 
-    const challenge: Challenge = {
-      id: `challenge_${Date.now()}`,
-      title: newChallenge.title,
-      description: newChallenge.description,
-      type: newChallenge.type,
-      target: newChallenge.target,
-      duration: newChallenge.duration * 24 * 60 * 60 * 1000,
-      createdBy: user?.email || '',
-      createdByName: user?.name || 'You',
-      participants: [user?.email || '', ...newChallenge.participants],
-      startTime: Date.now(),
-      endTime: Date.now() + (newChallenge.duration * 24 * 60 * 60 * 1000),
-      status: 'active',
-      reward: { type: 'points', value: newChallenge.target * 10 },
-      progress: 0,
-    };
+    if (!user?.email || !user?.name) {
+      alert('請先登入');
+      return;
+    }
 
-    setChallenges([challenge, ...challenges]);
-    setNewChallenge({
-      title: '',
-      description: '',
-      type: 'poop_count',
-      target: 10,
-      duration: 7,
-      participants: [],
-    });
-    setSelectedTab('active');
-    alert('挑戰創建成功！');
+    try {
+      await createChallengeMutation({
+        title: newChallenge.title,
+        description: newChallenge.description,
+        type: newChallenge.type,
+        target: newChallenge.target,
+        duration: newChallenge.duration * 24 * 60 * 60 * 1000,
+        createdBy: user.email,
+        createdByName: user.name,
+        participants: [user.email, ...newChallenge.participants],
+      });
+
+      setNewChallenge({
+        title: '',
+        description: '',
+        type: 'poop_count',
+        target: 10,
+        duration: 7,
+        participants: [],
+      });
+      setSelectedTab('active');
+      alert('挑戰創建成功！');
+    } catch (error) {
+      console.error('創建挑戰失敗:', error);
+      alert('創建挑戰失敗,請稍後再試');
+    }
   };
 
-  const activeChallenges = challenges.filter(c => c.status === 'active');
-  const completedChallenges = challenges.filter(c => c.status === 'completed');
+  const activeChallenges = challengesData?.filter(c => c.status === 'active') || [];
+  const completedChallenges = challengesData?.filter(c => c.status === 'completed') || [];
 
   if (!isOpen) return null;
 
@@ -191,14 +175,13 @@ export const ChallengesModal: React.FC<ChallengesModalProps> = ({
             <button
               key={tab}
               onClick={() => setSelectedTab(tab)}
-              className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
-                selectedTab === tab
+              className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${selectedTab === tab
                   ? 'bg-white text-purple-600 shadow-sm'
                   : 'text-gray-600 hover:text-gray-800'
-              }`}
+                }`}
             >
-              {tab === 'active' ? translations.active : 
-               tab === 'completed' ? translations.completed : translations.createChallenge}
+              {tab === 'active' ? translations.active :
+                tab === 'completed' ? translations.completed : translations.createChallenge}
             </button>
           ))}
         </div>
@@ -210,11 +193,11 @@ export const ChallengesModal: React.FC<ChallengesModalProps> = ({
               <div className="text-center py-8">
                 <div className="text-6xl mb-4">🎯</div>
                 <p className="text-gray-500">沒有{translations.active}的挑戰</p>
-                <p className="text-sm text-gray-400">{translations.createChallenge}來開始競爭吧！</p>
+                <p className="text-sm text-gray-400">{translations.createChallenge}來開始競爭吧!</p>
               </div>
             ) : (
               activeChallenges.map((challenge) => (
-                <div key={challenge.id} className="border-2 border-purple-200 rounded-lg p-4 bg-purple-50">
+                <div key={challenge._id} className="border-2 border-purple-200 rounded-lg p-4 bg-purple-50">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center">
                       <span className="text-2xl mr-3">{getTypeIcon(challenge.type)}</span>
@@ -224,20 +207,20 @@ export const ChallengesModal: React.FC<ChallengesModalProps> = ({
                       </div>
                     </div>
                     <span className="text-xs bg-green-100 text-green-600 px-2 py-1 rounded-full">
-{translations.active}
+                      {translations.active}
                     </span>
                   </div>
 
                   {/* 進度條 */}
                   <div className="mb-3">
                     <div className="flex justify-between text-sm mb-1">
-                      <span>{translations.progress}: {challenge.progress} / {challenge.target}</span>
-                      <span>{getProgressPercentage(challenge).toFixed(0)}%</span>
+                      <span>{translations.progress}: 0 / {challenge.target}</span>
+                      <span>0%</span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div
                         className="bg-purple-600 h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${getProgressPercentage(challenge)}%` }}
+                        style={{ width: `0%` }}
                       />
                     </div>
                   </div>
@@ -267,11 +250,11 @@ export const ChallengesModal: React.FC<ChallengesModalProps> = ({
               <div className="text-center py-8">
                 <div className="text-6xl mb-4">🏆</div>
                 <p className="text-gray-500">還沒有完成的挑戰</p>
-                <p className="text-sm text-gray-400">完成挑戰來獲得獎勵！</p>
+                <p className="text-sm text-gray-400">完成挑戰來獲得獎勵!</p>
               </div>
             ) : (
               completedChallenges.map((challenge) => (
-                <div key={challenge.id} className="border-2 border-gray-200 rounded-lg p-4 bg-gray-50">
+                <div key={challenge._id} className="border-2 border-gray-200 rounded-lg p-4 bg-gray-50">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center">
                       <span className="text-2xl mr-3">{getTypeIcon(challenge.type)}</span>
@@ -281,20 +264,20 @@ export const ChallengesModal: React.FC<ChallengesModalProps> = ({
                       </div>
                     </div>
                     <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
-{translations.completed}
+                      {translations.completed}
                     </span>
                   </div>
 
                   <div className="flex justify-between items-center text-sm">
                     <div>
                       <span className="text-gray-500">完成度: </span>
-                      <span className="font-medium">{challenge.progress} / {challenge.target}</span>
+                      <span className="font-medium">{challenge.target} / {challenge.target}</span>
                     </div>
                     <div>
                       <span className="text-gray-500">獎勵: </span>
                       <span className="font-medium text-green-600">
                         {challenge.reward.type === 'points' ? `${challenge.reward.value} 積分` :
-                         challenge.reward.type === 'item' ? '道具獎勵' : '成就獎勵'}
+                          challenge.reward.type === 'item' ? '道具獎勵' : '成就獎勵'}
                       </span>
                     </div>
                   </div>
@@ -334,7 +317,7 @@ export const ChallengesModal: React.FC<ChallengesModalProps> = ({
                 <label className="block text-sm font-medium mb-2">挑戰類型</label>
                 <select
                   value={newChallenge.type}
-                  onChange={(e) => setNewChallenge({ ...newChallenge, type: e.target.value as Challenge['type'] })}
+                  onChange={(e) => setNewChallenge({ ...newChallenge, type: e.target.value as any })}
                   className="w-full p-3 border rounded-lg"
                 >
                   <option value="poop_count">便便數量</option>

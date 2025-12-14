@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '../convex/_generated/api';
 import { Achievement, UserAchievement, UserProfile, TranslationStrings } from '../types';
 
 interface AchievementsModalProps {
@@ -19,8 +21,16 @@ export const AchievementsModal: React.FC<AchievementsModalProps> = ({
   translations,
 }) => {
   const [achievements, setAchievements] = useState<Achievement[]>([]);
-  const [userAchievements, setUserAchievements] = useState<UserAchievement[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<'all' | 'quantity' | 'quality' | 'social' | 'special'>('all');
+
+  // 從 Convex 資料庫獲取用戶成就
+  const userAchievementsData = useQuery(
+    api.social.getUserAchievements,
+    user?.email ? { userId: user.email } : 'skip'
+  );
+
+  // 解鎖成就的 mutation
+  const unlockAchievement = useMutation(api.social.unlockAchievement);
 
   // 預定義成就列表
   const predefinedAchievements: Achievement[] = [
@@ -75,7 +85,7 @@ export const AchievementsModal: React.FC<AchievementsModalProps> = ({
       rarity: 'platinum',
       points: 2000,
     },
-    
+
     // 質量類成就
     {
       id: 'perfect_rating',
@@ -97,7 +107,7 @@ export const AchievementsModal: React.FC<AchievementsModalProps> = ({
       rarity: 'silver',
       points: 150,
     },
-    
+
     // 社交類成就
     {
       id: 'first_friend',
@@ -129,7 +139,7 @@ export const AchievementsModal: React.FC<AchievementsModalProps> = ({
       rarity: 'bronze',
       points: 20,
     },
-    
+
     // 特殊成就
     {
       id: 'early_bird',
@@ -163,62 +173,50 @@ export const AchievementsModal: React.FC<AchievementsModalProps> = ({
     },
   ];
 
-  // 計算真實用戶成就數據
-  const calculateRealUserAchievements = (): UserAchievement[] => {
-    if (!user?.email) return [];
+
+  // 檢查並自動解鎖成就
+  const checkAndUnlockAchievements = async () => {
+    if (!user?.email || !userAchievementsData) return;
 
     const userPoops = poops.filter(p => p.userId === user.email);
-    const unlockedAchievements: UserAchievement[] = [];
+    const unlockedAchievementIds = new Set(userAchievementsData.map(ua => ua.achievementId));
 
-    // 檢查每個成就是否已解鎖
-    predefinedAchievements.forEach(achievement => {
-      let unlocked = false;
-      let unlockedAt = Date.now();
+    // 檢查每個成就是否應該解鎖
+    for (const achievement of predefinedAchievements) {
+      // 如果已經解鎖,跳過
+      if (unlockedAchievementIds.has(achievement.id)) continue;
+
+      let shouldUnlock = false;
 
       switch (achievement.requirement.type) {
         case 'poop_count':
-          if (userPoops.length >= achievement.requirement.value) {
-            unlocked = true;
-            // 找到達成條件的時間點
-            if (userPoops.length >= achievement.requirement.value) {
-              const sortedPoops = userPoops.sort((a, b) => a.timestamp - b.timestamp);
-              if (sortedPoops[achievement.requirement.value - 1]) {
-                unlockedAt = sortedPoops[achievement.requirement.value - 1].timestamp;
-              }
-            }
-          }
+          shouldUnlock = userPoops.length >= achievement.requirement.value;
           break;
-        
+
         case 'rating_average':
           const totalRating = userPoops.reduce((sum, p) => sum + (p.rating || 0), 0);
           const averageRating = userPoops.length > 0 ? totalRating / userPoops.length : 0;
-          if (averageRating >= achievement.requirement.value) {
-            unlocked = true;
-          }
+          shouldUnlock = averageRating >= achievement.requirement.value;
           break;
-        
+
         case 'friend_count':
-          if (friends.length >= achievement.requirement.value) {
-            unlocked = true;
-          }
+          shouldUnlock = friends.length >= achievement.requirement.value;
           break;
-        
+
         case 'attack_count':
-          // 這裡需要從攻擊記錄中獲取，暫時設為 false
-          unlocked = false;
+          // 這裡需要從攻擊記錄中獲取,暫時設為 false
+          shouldUnlock = false;
           break;
-        
+
         case 'special':
           // 特殊成就需要特殊邏輯檢查
           if (achievement.id === 'early_bird') {
-            // 檢查是否有早上6點前的記錄
-            unlocked = userPoops.some(p => {
+            shouldUnlock = userPoops.some(p => {
               const hour = new Date(p.timestamp).getHours();
               return hour < 6;
             });
           } else if (achievement.id === 'night_owl') {
-            // 檢查是否有晚上11點後的記錄
-            unlocked = userPoops.some(p => {
+            shouldUnlock = userPoops.some(p => {
               const hour = new Date(p.timestamp).getHours();
               return hour >= 23;
             });
@@ -226,25 +224,29 @@ export const AchievementsModal: React.FC<AchievementsModalProps> = ({
           break;
       }
 
-      if (unlocked) {
-        unlockedAchievements.push({
-          userId: user.email,
-          achievementId: achievement.id,
-          unlockedAt,
-          progress: 100,
-        });
+      // 如果應該解鎖,調用 mutation
+      if (shouldUnlock) {
+        try {
+          await unlockAchievement({
+            userId: user.email,
+            achievementId: achievement.id,
+            progress: 100,
+          });
+          console.log(`✅ 成就已解鎖: ${achievement.name}`);
+        } catch (error) {
+          console.error(`❌ 解鎖成就失敗: ${achievement.name}`, error);
+        }
       }
-    });
-
-    return unlockedAchievements;
+    }
   };
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && user?.email && userAchievementsData) {
       setAchievements(predefinedAchievements);
-      setUserAchievements(calculateRealUserAchievements());
+      // 檢查並解鎖新成就
+      checkAndUnlockAchievements();
     }
-  }, [isOpen]);
+  }, [isOpen, user?.email, userAchievementsData, poops.length, friends.length]);
 
   const getRarityColor = (rarity: string) => {
     switch (rarity) {
@@ -279,17 +281,17 @@ export const AchievementsModal: React.FC<AchievementsModalProps> = ({
   };
 
   const isUnlocked = (achievementId: string) => {
-    return userAchievements.some(ua => ua.achievementId === achievementId);
+    return userAchievementsData?.some(ua => ua.achievementId === achievementId) || false;
   };
 
-  const filteredAchievements = achievements.filter(achievement => 
+  const filteredAchievements = achievements.filter(achievement =>
     selectedCategory === 'all' || achievement.category === selectedCategory
   );
 
   const unlockedAchievements = filteredAchievements.filter(a => isUnlocked(a.id));
   const lockedAchievements = filteredAchievements.filter(a => !isUnlocked(a.id));
 
-  const totalPoints = userAchievements.reduce((sum, ua) => {
+  const totalPoints = (userAchievementsData || []).reduce((sum, ua) => {
     const achievement = achievements.find(a => a.id === ua.achievementId);
     return sum + (achievement?.points || 0);
   }, 0);
@@ -314,7 +316,7 @@ export const AchievementsModal: React.FC<AchievementsModalProps> = ({
         {/* 統計資訊 */}
         <div className="grid grid-cols-3 gap-4 mb-6">
           <div className="text-center p-3 bg-purple-50 rounded-lg">
-            <div className="text-2xl font-bold text-purple-600">{userAchievements.length}</div>
+            <div className="text-2xl font-bold text-purple-600">{userAchievementsData?.length || 0}</div>
             <div className="text-sm text-purple-600">{translations.unlocked}</div>
           </div>
           <div className="text-center p-3 bg-blue-50 rounded-lg">
@@ -333,11 +335,10 @@ export const AchievementsModal: React.FC<AchievementsModalProps> = ({
             <button
               key={category}
               onClick={() => setSelectedCategory(category)}
-              className={`flex-shrink-0 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
-                selectedCategory === category
-                  ? 'bg-white text-purple-600 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-800'
-              }`}
+              className={`flex-shrink-0 py-2 px-3 rounded-md text-sm font-medium transition-colors ${selectedCategory === category
+                ? 'bg-white text-purple-600 shadow-sm'
+                : 'text-gray-600 hover:text-gray-800'
+                }`}
             >
               {getCategoryName(category)}
             </button>
@@ -354,7 +355,7 @@ export const AchievementsModal: React.FC<AchievementsModalProps> = ({
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {unlockedAchievements.map((achievement) => {
-                  const userAchievement = userAchievements.find(ua => ua.achievementId === achievement.id);
+                  const userAchievement = userAchievementsData?.find(ua => ua.achievementId === achievement.id);
                   return (
                     <div
                       key={achievement.id}
