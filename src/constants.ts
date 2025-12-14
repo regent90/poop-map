@@ -133,7 +133,6 @@ export const translations: Translations = {
     timeRemaining: 'Time Remaining',
     // 動態牆翻譯
     activityFeed: 'Activity Feed',
-    friends: 'Friends',
     mine: 'Mine',
     // 成就系統翻譯
     achievementSystem: 'Achievement System',

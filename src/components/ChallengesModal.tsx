@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation } from 'convex/react';
-import { api } from '../convex/_generated/api';
+import { api } from '../../convex/_generated/api';
 import { Challenge, UserProfile, Friend, TranslationStrings } from '../types';
 
 interface ChallengesModalProps {
@@ -176,8 +176,8 @@ export const ChallengesModal: React.FC<ChallengesModalProps> = ({
               key={tab}
               onClick={() => setSelectedTab(tab)}
               className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${selectedTab === tab
-                  ? 'bg-white text-purple-600 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-800'
+                ? 'bg-white text-purple-600 shadow-sm'
+                : 'text-gray-600 hover:text-gray-800'
                 }`}
             >
               {tab === 'active' ? translations.active :
