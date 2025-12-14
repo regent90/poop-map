@@ -1,38 +1,47 @@
 import { PoopItem, PoopBombEffect } from '../types';
 
 // 便便道具配置
+// 便便道具配置
 export const POOP_ITEM_CONFIGS = {
   poop_bomb: {
     type: 'poop_bomb' as const,
     name: '💩 便便炸彈',
     description: '經典便便攻擊，造成中等程度的便便雨',
     icon: '💣',
+    imageUrl: '/images/items/poop_bomb.jpg',
     rarity: 'common' as const,
     dropRate: 0.8, // 80% 機率獲得
+    videoUrl: undefined, // 預留欄位
   },
   golden_poop: {
     type: 'golden_poop' as const,
     name: '✨ 黃金便便',
     description: '稀有的黃金便便，造成華麗的金色便便暴風雨',
     icon: '🌟',
+    imageUrl: '/images/items/golden_poop.jpg',
     rarity: 'rare' as const,
     dropRate: 0.15, // 15% 機率獲得
+    videoUrl: undefined,
   },
   rainbow_poop: {
     type: 'rainbow_poop' as const,
     name: '🌈 彩虹便便',
     description: '史詩級彩虹便便，造成絢爛的彩虹便便龍捲風',
     icon: '🦄',
+    imageUrl: '/images/items/rainbow_poop.jpg',
     rarity: 'epic' as const,
     dropRate: 0.04, // 4% 機率獲得
+    videoUrl: undefined,
   },
   stinky_poop: {
     type: 'stinky_poop' as const,
     name: '🤢 臭臭便便',
     description: '傳說級臭臭便便，造成毀滅性的便便海嘯',
     icon: '☠️',
+    imageUrl: '/images/items/stinky_poop.jpg',
     rarity: 'legendary' as const,
     dropRate: 0.01, // 1% 機率獲得
+    videoUrl: undefined,
   },
 };
 
@@ -88,7 +97,7 @@ export const RARITY_NAMES = {
 export const generateRandomPoopItem = (): PoopItem => {
   const random = Math.random();
   let selectedType: keyof typeof POOP_ITEM_CONFIGS;
-  
+
   if (random <= POOP_ITEM_CONFIGS.stinky_poop.dropRate) {
     selectedType = 'stinky_poop';
   } else if (random <= POOP_ITEM_CONFIGS.stinky_poop.dropRate + POOP_ITEM_CONFIGS.rainbow_poop.dropRate) {
@@ -98,9 +107,9 @@ export const generateRandomPoopItem = (): PoopItem => {
   } else {
     selectedType = 'poop_bomb';
   }
-  
+
   const config = POOP_ITEM_CONFIGS[selectedType];
-  
+
   return {
     id: `${selectedType}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
     type: config.type,
@@ -136,7 +145,7 @@ export const getItemObtainedMessage = (item: PoopItem): string => {
       '👑 你是便便之王！臭臭便便無人能敵！',
     ],
   };
-  
+
   const rarityMessages = messages[item.rarity];
   return rarityMessages[Math.floor(Math.random() * rarityMessages.length)];
 };

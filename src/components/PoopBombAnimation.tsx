@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { PoopBombEffect, PoopAttack } from '../types';
-import { POOP_BOMB_EFFECTS, RARITY_COLORS } from '../config/poopItems';
+import { POOP_BOMB_EFFECTS, RARITY_COLORS, POOP_ITEM_CONFIGS } from '../config/poopItems';
 import { soundManager } from '../utils/soundEffects';
 
 interface PoopBombAnimationProps {
@@ -97,13 +97,13 @@ export const PoopBombAnimation: React.FC<PoopBombAnimationProps> = ({ attack, on
   // 創建超級醜萌的粒子
   const createParticles = useCallback((): PoopParticle[] => {
     const newParticles: PoopParticle[] = [];
-    
+
     for (let i = 0; i < effect.particles; i++) {
       const angle = (Math.PI * 2 * i) / effect.particles + Math.random() * 0.5;
       const speed = Math.random() * 6 + 3; // 稍微慢一點，更萌
       const life = Math.random() * 4000 + 3000; // 活得更久一點
       const isCute = Math.random() > 0.3; // 70% 機率是萌的
-      
+
       newParticles.push({
         id: i,
         x: window.innerWidth / 2 + (Math.random() - 0.5) * 100, // 稍微分散一點
@@ -128,7 +128,7 @@ export const PoopBombAnimation: React.FC<PoopBombAnimationProps> = ({ attack, on
         heartBeat: 0,
       });
     }
-    
+
     return newParticles;
   }, [effect.particles, config]);
 
@@ -147,7 +147,7 @@ export const PoopBombAnimation: React.FC<PoopBombAnimationProps> = ({ attack, on
         life: 60,
       });
     }
-    
+
     return {
       id: Date.now() + Math.random(),
       x,
@@ -238,12 +238,12 @@ export const PoopBombAnimation: React.FC<PoopBombAnimationProps> = ({ attack, on
     ];
 
     let currentIndex = 0;
-    
+
     const phaseTimer = () => {
       if (currentIndex < phases.length) {
         const currentPhaseData = phases[currentIndex];
         setCurrentPhase(currentPhaseData.phase as any);
-        
+
         if (currentPhaseData.phase === 'buildup') {
           triggerShake(5);
         } else if (currentPhaseData.phase === 'explosion') {
@@ -252,10 +252,10 @@ export const PoopBombAnimation: React.FC<PoopBombAnimationProps> = ({ attack, on
           setParticles(createParticles());
           triggerShake(15);
           triggerFlash(rarityColor);
-          
+
           // 播放音效
           soundManager.playAttackSound(attack.itemUsed.type);
-          
+
           // 創建多個煙火
           setTimeout(() => {
             for (let i = 0; i < 5; i++) {
@@ -268,7 +268,7 @@ export const PoopBombAnimation: React.FC<PoopBombAnimationProps> = ({ attack, on
             }
           }, 500);
         }
-        
+
         currentIndex++;
         if (currentIndex < phases.length) {
           setTimeout(phaseTimer, currentPhaseData.duration);
@@ -295,16 +295,16 @@ export const PoopBombAnimation: React.FC<PoopBombAnimationProps> = ({ attack, on
   if (!showMessage && !isAnimating && currentPhase === 'intro') return null;
 
   return (
-    <div 
+    <div
       className="fixed inset-0 z-50 pointer-events-none overflow-hidden"
       style={{
         transform: `translate(${(Math.random() - 0.5) * shakeIntensity}px, ${(Math.random() - 0.5) * shakeIntensity}px)`,
       }}
     >
       {/* 動態背景 */}
-      <div className={`absolute inset-0 bg-gradient-to-br ${config.bgGradient} transition-opacity duration-1000`} 
-           style={{ opacity: isAnimating ? 0.4 : 0.2 }} />
-      
+      <div className={`absolute inset-0 bg-gradient-to-br ${config.bgGradient} transition-opacity duration-1000`}
+        style={{ opacity: isAnimating ? 0.4 : 0.2 }} />
+
       {/* 醜萌背景粒子效果 */}
       {isAnimating && (
         <div className="absolute inset-0">
@@ -324,7 +324,7 @@ export const PoopBombAnimation: React.FC<PoopBombAnimationProps> = ({ attack, on
               {['💩', '💖', '✨', '🌟', '💫'][Math.floor(Math.random() * 5)]}
             </div>
           ))}
-          
+
           {/* 醜萌文字表情雨 */}
           {Array.from({ length: 20 }).map((_, i) => (
             <div
@@ -342,7 +342,7 @@ export const PoopBombAnimation: React.FC<PoopBombAnimationProps> = ({ attack, on
               {config.cuteEmojis[Math.floor(Math.random() * config.cuteEmojis.length)]}
             </div>
           ))}
-          
+
           {/* 彩虹泡泡效果 */}
           {attack.itemUsed.type === 'rainbow_poop' && Array.from({ length: 15 }).map((_, i) => (
             <div
@@ -361,7 +361,7 @@ export const PoopBombAnimation: React.FC<PoopBombAnimationProps> = ({ attack, on
           ))}
         </div>
       )}
-      
+
       {/* 脈衝波效果 */}
       {currentPhase === 'explosion' && (
         <div className="absolute inset-0 flex items-center justify-center">
@@ -380,19 +380,19 @@ export const PoopBombAnimation: React.FC<PoopBombAnimationProps> = ({ attack, on
           ))}
         </div>
       )}
-      
+
       {/* 閃光效果 */}
       {flashColor && (
-        <div 
+        <div
           className="absolute inset-0 animate-ping"
           style={{ backgroundColor: flashColor, opacity: 0.6 }}
         />
       )}
-      
+
       {/* 醜萌攻擊訊息 */}
       {showMessage && (
         <div className="absolute inset-0 flex items-center justify-center">
-          <div 
+          <div
             className="bg-gradient-to-br from-pink-100 via-white to-yellow-100 rounded-3xl p-8 shadow-2xl max-w-md mx-4 text-center transform transition-all duration-500 border-4"
             style={{
               animation: currentPhase === 'buildup' ? 'bounce 0.5s infinite' : 'pulse 2s infinite',
@@ -403,20 +403,33 @@ export const PoopBombAnimation: React.FC<PoopBombAnimationProps> = ({ attack, on
             {/* 裝飾性愛心 */}
             <div className="absolute -top-4 -left-4 text-pink-400 text-2xl animate-pulse">💖</div>
             <div className="absolute -top-4 -right-4 text-pink-400 text-2xl animate-pulse" style={{ animationDelay: '0.5s' }}>💖</div>
-            
-            <div 
-              className="text-8xl mb-6 relative"
-              style={{ 
+
+            <div
+              className="mb-6 relative flex justify-center"
+              style={{
                 animation: currentPhase === 'buildup' ? 'bounce 0.3s infinite' : 'spin 3s linear infinite',
               }}
             >
-              {attack.itemUsed.icon}
+              {/* 替換原本的 Emoji 為圖片 */}
+              {POOP_ITEM_CONFIGS[attack.itemUsed.type]?.imageUrl ? (
+                <img
+                  src={POOP_ITEM_CONFIGS[attack.itemUsed.type].imageUrl}
+                  alt={attack.itemUsed.name}
+                  className="w-32 h-32 object-contain drop-shadow-2xl rounded-full"
+                  style={{
+                    filter: `drop-shadow(0 0 10px ${rarityColor})`,
+                  }}
+                />
+              ) : (
+                <span className="text-8xl">{attack.itemUsed.icon}</span>
+              )}
+
               {/* 閃爍星星 */}
               <div className="absolute -top-2 -right-2 text-2xl animate-ping">✨</div>
               <div className="absolute -bottom-2 -left-2 text-2xl animate-ping" style={{ animationDelay: '0.3s' }}>⭐</div>
             </div>
-            
-            <h2 className="text-3xl font-bold mb-3" style={{ 
+
+            <h2 className="text-3xl font-bold mb-3" style={{
               background: `linear-gradient(45deg, ${rarityColor}, #FF69B4, ${rarityColor})`,
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
@@ -425,21 +438,21 @@ export const PoopBombAnimation: React.FC<PoopBombAnimationProps> = ({ attack, on
             }}>
               💩✨ 超萌便便攻擊來襲！✨💩
             </h2>
-            
+
             <div className="mb-4 p-3 bg-pink-50 rounded-2xl border-2 border-pink-200">
               <p className="text-lg text-gray-700 mb-2">
-                <span className="font-bold text-purple-600">{attack.fromUserName}</span> 
+                <span className="font-bold text-purple-600">{attack.fromUserName}</span>
                 <span className="text-pink-500"> (◕‿◕) </span>
                 向你發射了
               </p>
-              <p 
+              <p
                 className="text-2xl font-bold"
                 style={{ color: rarityColor }}
               >
                 {attack.itemUsed.name}
               </p>
             </div>
-            
+
             {attack.message && (
               <div className="bg-gradient-to-r from-yellow-100 to-pink-100 p-4 rounded-2xl border-2 border-yellow-200 mb-4">
                 <p className="text-lg text-gray-600 italic">
@@ -448,7 +461,7 @@ export const PoopBombAnimation: React.FC<PoopBombAnimationProps> = ({ attack, on
                 <div className="text-sm text-pink-500 mt-2">(´∀｀)♡</div>
               </div>
             )}
-            
+
             {currentPhase === 'buildup' && (
               <div className="mt-4 p-3 bg-red-100 rounded-2xl border-2 border-red-300">
                 <div className="text-red-500 font-bold text-xl animate-bounce">
@@ -457,7 +470,7 @@ export const PoopBombAnimation: React.FC<PoopBombAnimationProps> = ({ attack, on
                 <div className="text-sm text-red-400 mt-1">{'(>_<)'}</div>
               </div>
             )}
-            
+
             {/* 底部裝飾 */}
             <div className="flex justify-center space-x-2 mt-4">
               <span className="text-2xl animate-bounce">🌟</span>
@@ -469,7 +482,7 @@ export const PoopBombAnimation: React.FC<PoopBombAnimationProps> = ({ attack, on
           </div>
         </div>
       )}
-      
+
       {/* 粒子動畫 */}
       {isAnimating && particles.map(particle => (
         <div key={particle.id}>
@@ -489,14 +502,12 @@ export const PoopBombAnimation: React.FC<PoopBombAnimationProps> = ({ attack, on
               }}
             />
           ))}
-          
+
           {/* 醜萌主粒子 */}
           <div
-            className={`absolute pointer-events-none select-none ${
-              attack.itemUsed.type === 'rainbow_poop' ? 'rainbow-pulse' : ''
-            } ${
-              attack.itemUsed.type === 'golden_poop' ? 'golden-shimmer' : ''
-            }`}
+            className={`absolute pointer-events-none select-none ${attack.itemUsed.type === 'rainbow_poop' ? 'rainbow-pulse' : ''
+              } ${attack.itemUsed.type === 'golden_poop' ? 'golden-shimmer' : ''
+              }`}
             style={{
               left: particle.x - 20,
               top: particle.y - 20,
@@ -567,7 +578,7 @@ export const PoopBombAnimation: React.FC<PoopBombAnimationProps> = ({ attack, on
           </div>
         </div>
       ))}
-      
+
       {/* 煙火效果 */}
       {fireworks.map(firework => (
         <div key={firework.id}>
@@ -589,13 +600,13 @@ export const PoopBombAnimation: React.FC<PoopBombAnimationProps> = ({ attack, on
           ))}
         </div>
       ))}
-      
+
       {/* 特殊效果層 */}
       {isAnimating && (
         <>
           {effect.type === 'poop_tornado' && (
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="poop-tornado text-9xl opacity-90" style={{ 
+              <div className="poop-tornado text-9xl opacity-90" style={{
                 textShadow: '0 0 30px #8B4513, 0 0 60px #8B4513',
                 filter: 'drop-shadow(0 0 20px #8B4513)'
               }}>
@@ -618,7 +629,7 @@ export const PoopBombAnimation: React.FC<PoopBombAnimationProps> = ({ attack, on
               ))}
             </div>
           )}
-          
+
           {effect.type === 'poop_explosion' && (
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="poop-explosion text-9xl opacity-90" style={{
@@ -645,10 +656,10 @@ export const PoopBombAnimation: React.FC<PoopBombAnimationProps> = ({ attack, on
               ))}
             </div>
           )}
-          
+
           {effect.type === 'golden_shower' && (
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="golden-shimmer text-9xl opacity-90" style={{ 
+              <div className="golden-shimmer text-9xl opacity-90" style={{
                 color: '#FFD700',
                 textShadow: '0 0 50px #FFD700, 0 0 100px #FFD700',
                 filter: 'drop-shadow(0 0 30px #FFD700)'
@@ -676,10 +687,10 @@ export const PoopBombAnimation: React.FC<PoopBombAnimationProps> = ({ attack, on
           )}
         </>
       )}
-      
+
       {/* 邊框光效 */}
       {isAnimating && (
-        <div 
+        <div
           className="absolute inset-0 pointer-events-none"
           style={{
             border: `4px solid ${rarityColor}`,
