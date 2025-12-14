@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MyPoopIcon, FriendPoopIcon, PublicPoopIcon } from './PoopIcons';
+import { MyPoopIcon, FriendPoopIcon, PublicPoopIcon, GlobeIcon } from './PoopIcons';
 
 export type PoopVisibilityFilter = 'all' | 'mine' | 'friends' | 'public';
 
@@ -42,10 +42,10 @@ export const PoopVisibilityFilter: React.FC<PoopVisibilityFilterProps> = ({
     {
       value: 'all' as const,
       label: translations.allPoops,
-      icon: '🌍',
+      icon: null,
       description: translations.showAllVisible,
       color: 'text-gray-700',
-      component: null
+      component: <GlobeIcon size={20} />
     },
     {
       value: 'mine' as const,
@@ -117,14 +117,13 @@ export const PoopVisibilityFilter: React.FC<PoopVisibilityFilterProps> = ({
               <h3 className="text-sm font-semibold text-gray-800">{translations.poopVisibility}</h3>
               <p className="text-xs text-gray-500">{translations.selectPoopType}</p>
             </div>
-            
+
             {filterOptions.map((option) => (
               <button
                 key={option.value}
                 onClick={() => handleFilterSelect(option.value)}
-                className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center ${
-                  currentFilter === option.value ? 'bg-amber-50 border-r-4 border-amber-500' : ''
-                }`}
+                className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors flex items-center ${currentFilter === option.value ? 'bg-amber-50 border-r-4 border-amber-500' : ''
+                  }`}
               >
                 <div className="flex items-center justify-center w-8 h-8 mr-3">
                   {option.component ? (
@@ -134,23 +133,22 @@ export const PoopVisibilityFilter: React.FC<PoopVisibilityFilterProps> = ({
                   )}
                 </div>
                 <div className="flex-1">
-                  <span className={`text-sm font-medium ${
-                    currentFilter === option.value ? 'text-amber-700' : 'text-gray-800'
-                  }`}>
+                  <span className={`text-sm font-medium ${currentFilter === option.value ? 'text-amber-700' : 'text-gray-800'
+                    }`}>
                     {option.label}
                   </span>
                   <p className="text-xs text-gray-500 mt-1">
                     {option.description}
                   </p>
                 </div>
-                
+
                 {currentFilter === option.value && (
                   <span className="text-amber-500 ml-2">✓</span>
                 )}
               </button>
             ))}
           </div>
-          
+
           {/* 底部提示 */}
           <div className="px-4 py-2 bg-gray-50 border-t border-gray-100">
             <p className="text-xs text-gray-500 text-center">
