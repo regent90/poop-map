@@ -283,7 +283,7 @@ export const AchievementsModal: React.FC<AchievementsModalProps> = ({
   const getCategoryName = (category: string) => {
     switch (category) {
       case 'quantity': return '數量';
-      case 'quality': return '質量';
+      case 'quality': return '品質';
       case 'social': return '社交';
       case 'special': return '特殊';
       default: return '全部';
